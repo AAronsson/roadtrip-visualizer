@@ -33,7 +33,7 @@ Upload the `dist/` folder to any static host (HTTPS is required for geolocation 
 
 ### GitHub Pages
 
-The repo includes [`.github/workflows/deploy-github-pages.yml`](.github/workflows/deploy-github-pages.yml). On each push to `main`, it builds with the correct asset path for **project** sites (`https://<user>.github.io/<repo>/`).
+The repo includes [`.github/workflows/deploy-github-pages.yml`](.github/workflows/deploy-github-pages.yml). On each push to `main`, it builds with the correct asset path for **project** sites (`https://<user>.github.io/<repo>/`). The app loads `trip.json` and `europe-countries.geojson` using Vite’s `import.meta.env.BASE_URL` so those requests hit `/<repo>/…` instead of the site root.
 
 1. Create a **public** repository on GitHub (GitHub Free only allows Pages for **public** repos on personal accounts).
 2. Push this project to the `main` branch.

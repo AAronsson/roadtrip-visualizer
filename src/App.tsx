@@ -46,7 +46,7 @@ export default function App() {
   const [recenterOnUserKey, setRecenterOnUserKey] = useState(0)
 
   useEffect(() => {
-    void fetch('/trip.json')
+    void fetch(`${import.meta.env.BASE_URL}trip.json`)
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
         return r.json() as Promise<TripFile>

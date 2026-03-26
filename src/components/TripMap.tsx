@@ -154,7 +154,9 @@ export function TripMap({
 
       void (async () => {
         try {
-          const res = await fetch('/europe-countries.geojson')
+          const res = await fetch(
+            `${import.meta.env.BASE_URL}europe-countries.geojson`,
+          )
           const raw = (await res.json()) as FeatureCollection
           const data = annotateCountryFills(raw)
           if (map.getSource('trip-europe-countries')) return
