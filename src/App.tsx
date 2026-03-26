@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TripMap } from './components/TripMap'
 import { WaypointDrawer } from './components/WaypointDrawer'
+import type { ParsedTripImport } from './lib/tripImport'
 import { mergeTripWaypoints } from './lib/tripMerge'
 import { resolveBasemap } from './lib/mapStyle'
 import {
@@ -119,8 +120,9 @@ export default function App() {
   )
 
   const exportJson = useCallback(() => {
-    const payload: TripFile = {
+    const payload = {
       waypoints: waypoints.map(normalizeWaypointForExport),
+      visitedWaypointIds: persisted.visitedWaypointIds,
     }
     const text = `${JSON.stringify(payload, null, 2)}\n`
     const blob = new Blob([text], { type: 'application/json' })
@@ -130,7 +132,20 @@ export default function App() {
     a.download = 'trip-export.json'
     a.click()
     URL.revokeObjectURL(url)
-  }, [waypoints])
+  }, [waypoints, persisted.visitedWaypointIds])
+
+  const importTripSnapshot = useCallback(
+    (parsed: ParsedTripImport) => {
+      if (!tripFile) return
+      const hideAllDefault = tripFile.waypoints.map((w) => w.id)
+      updatePersisted({
+        removedDefaultIds: hideAllDefault,
+        customWaypoints: parsed.waypoints,
+        visitedWaypointIds: parsed.visitedWaypointIds,
+      })
+    },
+    [tripFile, updatePersisted],
+  )
 
   const clearDeviceData = useCallback(() => {
     clearPersistedState()
@@ -228,6 +243,7 @@ export default function App() {
         onRemoveWaypoint={removeWaypoint}
         onAddWaypoint={addWaypoint}
         onExportJson={exportJson}
+        onImportTrip={importTripSnapshot}
         onClearDeviceData={clearDeviceData}
         geoActive={geoActive}
         geoError={geoError}

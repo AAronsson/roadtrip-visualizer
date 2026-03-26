@@ -314,6 +314,12 @@ body {
   color: var(--danger);
 }
 
+.import-ok {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--done);
+}
+
 .hit-list {
   margin: 8px 0 0;
   padding: 0;

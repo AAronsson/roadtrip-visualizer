@@ -1,6 +1,10 @@
-import { useId, useState } from 'react'
-import type { PersistedTripState, Waypoint } from '../types/trip'
+import { useId, useRef, useState } from 'react'
+import {
+  parseTripImportJson,
+  type ParsedTripImport,
+} from '../lib/tripImport'
 import { searchPlaces, type GeocodeHit } from '../lib/geocode'
+import type { PersistedTripState, Waypoint } from '../types/trip'
 
 function flagUrl(countryCode: string | undefined): string | null {
   if (!countryCode || countryCode.length !== 2) return null
@@ -17,6 +21,7 @@ type WaypointDrawerProps = {
   onRemoveWaypoint: (id: string) => void
   onAddWaypoint: (w: Waypoint) => void
   onExportJson: () => void
+  onImportTrip: (parsed: ParsedTripImport) => void
   onClearDeviceData: () => void
   geoActive: boolean
   geoError: string | null
@@ -36,6 +41,7 @@ export function WaypointDrawer({
   onRemoveWaypoint,
   onAddWaypoint,
   onExportJson,
+  onImportTrip,
   onClearDeviceData,
   geoActive,
   geoError,
@@ -45,6 +51,8 @@ export function WaypointDrawer({
   hasUserPosition,
 }: WaypointDrawerProps) {
   const formId = useId()
+  const importInputRef = useRef<HTMLInputElement>(null)
+  const [importMessage, setImportMessage] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [latStr, setLatStr] = useState('')
   const [lngStr, setLngStr] = useState('')
@@ -272,9 +280,51 @@ export function WaypointDrawer({
           </section>
 
           <section className="drawer-section drawer-section--actions">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              aria-label="Choose trip JSON file to import"
+              onChange={async (e) => {
+                const input = e.target
+                const file = input.files?.[0]
+                input.value = ''
+                if (!file) return
+                setImportMessage(null)
+                try {
+                  const text = await file.text()
+                  let raw: unknown
+                  try {
+                    raw = JSON.parse(text) as unknown
+                  } catch {
+                    throw new Error('File is not valid JSON.')
+                  }
+                  const parsed = parseTripImportJson(raw)
+                  onImportTrip(parsed)
+                  setImportMessage('Imported on this device.')
+                } catch (err) {
+                  setImportMessage(
+                    err instanceof Error ? err.message : 'Import failed.',
+                  )
+                }
+              }}
+            />
             <button type="button" className="button" onClick={onExportJson}>
               Export trip JSON
             </button>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => importInputRef.current?.click()}
+            >
+              Import trip JSON
+            </button>
+            {importMessage ? (
+              <p className={importMessage.startsWith('Imported') ? 'import-ok' : 'field-error'}>
+                {importMessage}
+              </p>
+            ) : null}
             <button
               type="button"
               className="button button--danger"

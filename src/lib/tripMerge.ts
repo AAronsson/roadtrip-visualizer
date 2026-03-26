@@ -7,10 +7,11 @@ export function mergeTripWaypoints(
   file: TripFile,
   persisted: PersistedTripState,
 ): Waypoint[] {
-  const defaultById = new Map(file.waypoints.map((w) => [w.id, w]))
   const removed = new Set(persisted.removedDefaultIds)
   const defaultsKept = file.waypoints.filter((w) => !removed.has(w.id))
-  const custom = persisted.customWaypoints.filter((c) => !defaultById.has(c.id))
+  const keptDefaultIds = new Set(defaultsKept.map((w) => w.id))
+  /** Omit customs that duplicate a default that is still shown (avoid two pins). */
+  const custom = persisted.customWaypoints.filter((c) => !keptDefaultIds.has(c.id))
   return [...defaultsKept, ...custom]
 }
 

@@ -12,7 +12,7 @@ npm run dev
 ```
 
 - Canonical stops live in [`public/trip.json`](public/trip.json). Change that file and redeploy so everyone gets the same route.
-- On each device, **visited**, **custom stops**, and **removed defaults** are stored in `localStorage` (per browser). Use **Export trip JSON** to copy the merged list back into `trip.json` if you want the repo to become the new source of truth.
+- On each device, **visited**, **custom stops**, and **removed defaults** are stored in `localStorage` (per browser). Use **Export trip JSON** to download the merged list and “done” flags; paste into `public/trip.json` and push to update everyone, or use **Import trip JSON** on another device (e.g. GitHub Pages) to copy your local trip without committing.
 
 ## Environment variables
 
