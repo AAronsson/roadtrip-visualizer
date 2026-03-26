@@ -1,0 +1,123 @@
+{
+  "waypoints": [
+    {
+      "id": "fjugesta",
+      "name": "Fjugesta",
+      "lat": 59.1739,
+      "lng": 14.8733,
+      "countryCode": "SE"
+    },
+    {
+      "id": "malmo",
+      "name": "Malmö",
+      "lat": 55.605,
+      "lng": 12.998,
+      "countryCode": "SE"
+    },
+    {
+      "id": "rodby",
+      "name": "Rödby",
+      "lat": 54.6853,
+      "lng": 11.3869,
+      "countryCode": "DK"
+    },
+    {
+      "id": "puttgarden",
+      "name": "Puttgarden",
+      "lat": 54.4826,
+      "lng": 11.2202,
+      "countryCode": "DE"
+    },
+    {
+      "id": "munich",
+      "name": "Munich",
+      "lat": 48.1351,
+      "lng": 11.582,
+      "countryCode": "DE"
+    },
+    {
+      "id": "innsbruck",
+      "name": "Innsbruck",
+      "lat": 47.2692,
+      "lng": 11.4041,
+      "countryCode": "AT"
+    },
+    {
+      "id": "dolomites",
+      "name": "Dolomites",
+      "lat": 46.5369,
+      "lng": 12.1357,
+      "countryCode": "IT"
+    },
+    {
+      "id": "lake-garda",
+      "name": "Lake Garda",
+      "lat": 45.63,
+      "lng": 10.67,
+      "countryCode": "IT"
+    },
+    {
+      "id": "lake-como",
+      "name": "Lake Como",
+      "lat": 45.987,
+      "lng": 9.261,
+      "countryCode": "IT"
+    },
+    {
+      "id": "nice",
+      "name": "Nice",
+      "lat": 43.7102,
+      "lng": 7.262,
+      "countryCode": "FR"
+    },
+    {
+      "id": "monaco",
+      "name": "Monaco",
+      "lat": 43.7384,
+      "lng": 7.4246,
+      "countryCode": "MC"
+    },
+    {
+      "id": "turin",
+      "name": "Turin",
+      "lat": 45.0703,
+      "lng": 7.6869,
+      "countryCode": "IT"
+    },
+    {
+      "id": "geneva",
+      "name": "Geneva",
+      "lat": 46.2044,
+      "lng": 6.1432,
+      "countryCode": "CH"
+    },
+    {
+      "id": "lille",
+      "name": "Lille",
+      "lat": 50.6292,
+      "lng": 3.0573,
+      "countryCode": "FR"
+    },
+    {
+      "id": "brussels",
+      "name": "Brussels",
+      "lat": 50.8503,
+      "lng": 4.3488,
+      "countryCode": "BE"
+    },
+    {
+      "id": "amsterdam",
+      "name": "Amsterdam",
+      "lat": 52.3676,
+      "lng": 4.9041,
+      "countryCode": "NL"
+    },
+    {
+      "id": "puttgarden-return",
+      "name": "Puttgarden",
+      "lat": 54.4826,
+      "lng": 11.2202,
+      "countryCode": "DE"
+    }
+  ]
+}

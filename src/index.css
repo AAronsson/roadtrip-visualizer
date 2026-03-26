@@ -1,0 +1,352 @@
+:root {
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --surface-elevated: #243044;
+  --text: #e8edf4;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --accent: #38bdf8;
+  --accent-muted: rgba(56, 189, 248, 0.2);
+  --done: #22c55e;
+  --upcoming: #3b82f6;
+  --danger: #f87171;
+  --font: 'Segoe UI', system-ui, sans-serif;
+  --tap: 44px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  color: var(--text-muted);
+}
+
+.trip-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.maplibregl-ctrl-bottom-right,
+.maplibregl-ctrl-top-right {
+  margin: 8px;
+}
+
+.basemap-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 10px 12px;
+  padding-right: 96px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  background: rgba(15, 20, 25, 0.92);
+  border-bottom: 1px solid var(--border);
+}
+
+.basemap-banner code {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.drawer-toggle {
+  position: absolute;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 10;
+  min-height: var(--tap);
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.drawer-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.waypoint-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 8;
+  width: min(100%, 380px);
+  max-width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+}
+
+.waypoint-drawer--open {
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.waypoint-drawer__inner {
+  height: 100%;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  overflow: auto;
+  pointer-events: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+}
+
+.waypoint-drawer__title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.waypoint-drawer__hint {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.waypoint-drawer__hint code {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.waypoint-list {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.waypoint-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 8px;
+  margin-bottom: 6px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.waypoint-item--done {
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.waypoint-item__flag {
+  display: block;
+  border-radius: 2px;
+}
+
+.waypoint-item__flag--empty {
+  width: 24px;
+  height: 18px;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.waypoint-item__body {
+  min-width: 0;
+}
+
+.waypoint-item__name {
+  display: block;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.waypoint-item__meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.waypoint-item__check input {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.waypoint-item__remove {
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--danger);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+}
+
+.waypoint-item__remove:hover {
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.drawer-section {
+  margin-bottom: 20px;
+}
+
+.drawer-section h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.drawer-section--actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.input {
+  flex: 1 1 140px;
+  min-height: var(--tap);
+  padding: 0 12px;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.input--narrow {
+  flex: 1 1 80px;
+  min-width: 0;
+}
+
+.button {
+  min-height: var(--tap);
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bg);
+  cursor: pointer;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.button--secondary {
+  color: var(--text);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+}
+
+.button--danger {
+  color: #fff;
+  background: rgba(220, 38, 38, 0.85);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coord-label {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.coord-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.field-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.hit-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hit-button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.hit-button:hover {
+  border-color: var(--accent);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
