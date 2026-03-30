@@ -3,6 +3,7 @@ import { TripMap } from './components/TripMap'
 import { WaypointDrawer } from './components/WaypointDrawer'
 import type { ParsedTripImport } from './lib/tripImport'
 import { mergeTripWaypoints } from './lib/tripMerge'
+import { fetchRoadRouteCoordinates } from './lib/osrmRoute'
 import { resolveBasemap } from './lib/mapStyle'
 import {
   clearPersistedState,
@@ -65,6 +66,46 @@ export default function App() {
     if (!tripFile) return []
     return mergeTripWaypoints(tripFile, persisted)
   }, [tripFile, persisted])
+
+  const waypointSig = useMemo(
+    () => waypoints.map((w) => `${w.id}:${w.lat},${w.lng}`).join('|'),
+    [waypoints],
+  )
+
+  const straightRouteCoords = useMemo(
+    () =>
+      waypoints.length < 2
+        ? []
+        : waypoints.map((w) => [w.lng, w.lat] as [number, number]),
+    [waypoints],
+  )
+
+  const [osrmRouteMatch, setOsrmRouteMatch] = useState<{
+    sig: string
+    coords: [number, number][]
+  } | null>(null)
+
+  useEffect(() => {
+    if (waypoints.length < 2) return
+    const sigAtStart = waypointSig
+    let cancelled = false
+    void fetchRoadRouteCoordinates(waypoints).then((coords) => {
+      if (cancelled) return
+      if (coords.length >= 2) {
+        setOsrmRouteMatch({ sig: sigAtStart, coords })
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [waypoints, waypointSig])
+
+  const routeLineCoordinates =
+    waypoints.length < 2
+      ? []
+      : osrmRouteMatch?.sig === waypointSig && osrmRouteMatch.coords.length >= 2
+        ? osrmRouteMatch.coords
+        : straightRouteCoords
 
   const defaultWaypointIds = useMemo(
     () => new Set((tripFile?.waypoints ?? []).map((w) => w.id)),
@@ -218,6 +259,7 @@ export default function App() {
       <TripMap
         basemap={basemap}
         waypoints={waypoints}
+        routeLineCoordinates={routeLineCoordinates}
         visitedWaypointIds={persisted.visitedWaypointIds}
         selectedWaypointId={selectedWaypointId}
         onSelectWaypoint={setSelectedWaypointId}

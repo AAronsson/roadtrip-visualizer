@@ -57,6 +57,10 @@ If your default branch is not `main`, rename it or change the `branches:` list i
 
 Serve `dist/` as static files (e.g. `nginx` `root /var/www/roadtrip-map;`) or a tiny static container. Put a router on your Traefik entrypoint with TLS; no server-side code is required for Phase 1.
 
+## Route line (roads)
+
+The orange line between stops is computed with the public **[OSRM](http://project-osrm.org/)** demo server (`router.project-osrm.org`) using the **driving** profile (OpenStreetMap roads). It follows roads where the engine can find a route; legs that cannot be routed (uncommon ferry quirks, etc.) fall back to a straight segment for that leg. The demo is for light use — for heavy traffic, run your own OSRM or another routing API and point the app at it (would require a small code change).
+
 ## Geocoding / Nominatim
 
 - With **`VITE_MAPTILER_API_KEY`**, search uses MapTiler Geocoding (same key as the map).

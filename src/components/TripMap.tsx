@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type { BasemapInfo } from '../lib/mapStyle'
 import { annotateCountryFills } from '../lib/countryFill'
+import { fetchStyleJsonWithMercator } from '../lib/ensureStyleMercator'
+import type { BasemapInfo } from '../lib/mapStyle'
 import type { FeatureCollection } from 'geojson'
 import type { Waypoint } from '../types/trip'
 
@@ -32,8 +33,8 @@ function buildWaypointsGeoJSON(
   }
 }
 
-function buildRouteGeoJSON(waypoints: Waypoint[]) {
-  if (waypoints.length < 2) {
+function buildRouteGeoJSON(coords: [number, number][]) {
+  if (coords.length < 2) {
     return { type: 'FeatureCollection' as const, features: [] }
   }
   return {
@@ -44,7 +45,7 @@ function buildRouteGeoJSON(waypoints: Waypoint[]) {
         properties: {},
         geometry: {
           type: 'LineString' as const,
-          coordinates: waypoints.map((w) => [w.lng, w.lat]),
+          coordinates: coords,
         },
       },
     ],
@@ -67,6 +68,8 @@ function applyTerrainIfPresent(map: maplibregl.Map) {
 type TripMapProps = {
   basemap: BasemapInfo
   waypoints: Waypoint[]
+  /** Polyline in map order [lng, lat]; from OSRM or straight fallback. */
+  routeLineCoordinates: [number, number][]
   visitedWaypointIds: string[]
   selectedWaypointId: string | null
   onSelectWaypoint: (id: string | null) => void
@@ -78,6 +81,7 @@ type TripMapProps = {
 export function TripMap({
   basemap,
   waypoints,
+  routeLineCoordinates,
   visitedWaypointIds,
   selectedWaypointId,
   onSelectWaypoint,
@@ -92,6 +96,7 @@ export function TripMap({
   const visitedRef = useRef(visitedWaypointIds)
   const selectedRef = useRef(selectedWaypointId)
   const userPositionRef = useRef(userPosition)
+  const routeCoordsRef = useRef(routeLineCoordinates)
 
   useEffect(() => {
     onSelectRef.current = onSelectWaypoint
@@ -101,7 +106,8 @@ export function TripMap({
     waypointsRef.current = waypoints
     visitedRef.current = visitedWaypointIds
     selectedRef.current = selectedWaypointId
-  }, [waypoints, visitedWaypointIds, selectedWaypointId])
+    routeCoordsRef.current = routeLineCoordinates
+  }, [waypoints, visitedWaypointIds, selectedWaypointId, routeLineCoordinates])
 
   useEffect(() => {
     userPositionRef.current = userPosition
@@ -124,32 +130,55 @@ export function TripMap({
         selectedRef.current,
       ),
     )
-    routeSource.setData(buildRouteGeoJSON(waypointsRef.current))
+    routeSource.setData(buildRouteGeoJSON(routeCoordsRef.current))
   }
 
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    const map = new maplibregl.Map({
-      container: el,
-      style: basemap.styleUrl,
-      center: [12, 54],
-      zoom: 4.25,
-      maxBounds: EUROPE_BOUNDS,
-      minZoom: 3,
-      maxZoom: 18,
-    })
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
-    map.addControl(new maplibregl.ScaleControl({ maxWidth: 120 }), 'bottom-left')
-    mapRef.current = map
+    let map: maplibregl.Map | null = null
+    let cancelled = false
 
-    map.on('load', () => {
-      if (basemap.hasTerrainHint) {
-        applyTerrainIfPresent(map)
+    void (async () => {
+      let style: maplibregl.MapOptions['style'] = basemap.styleUrl
+      try {
+        style = await fetchStyleJsonWithMercator(basemap.styleUrl)
+      } catch {
+        /* offline or blocked: fall back to URL (may still error on some styles) */
       }
 
-      const styleLayers = map.getStyle().layers ?? []
+      if (cancelled) return
+
+      map = new maplibregl.Map({
+        container: el,
+        style,
+        center: [12, 54],
+        zoom: 4.25,
+        maxBounds: EUROPE_BOUNDS,
+        minZoom: 3,
+        maxZoom: 18,
+      })
+
+      if (cancelled) {
+        map.remove()
+        return
+      }
+
+      const mapInstance = map
+      mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right')
+      mapInstance.addControl(
+        new maplibregl.ScaleControl({ maxWidth: 120 }),
+        'bottom-left',
+      )
+      mapRef.current = mapInstance
+
+      mapInstance.on('load', () => {
+      if (basemap.hasTerrainHint) {
+        applyTerrainIfPresent(mapInstance)
+      }
+
+      const styleLayers = mapInstance.getStyle().layers ?? []
       const beforeSymbolId = styleLayers.find((l) => l.type === 'symbol')?.id
 
       void (async () => {
@@ -159,9 +188,9 @@ export function TripMap({
           )
           const raw = (await res.json()) as FeatureCollection
           const data = annotateCountryFills(raw)
-          if (map.getSource('trip-europe-countries')) return
-          map.addSource('trip-europe-countries', { type: 'geojson', data })
-          map.addLayer(
+          if (mapInstance.getSource('trip-europe-countries')) return
+          mapInstance.addSource('trip-europe-countries', { type: 'geojson', data })
+          mapInstance.addLayer(
             {
               id: 'trip-europe-fills',
               type: 'fill',
@@ -173,7 +202,7 @@ export function TripMap({
             },
             beforeSymbolId,
           )
-          map.addLayer(
+          mapInstance.addLayer(
             {
               id: 'trip-europe-outlines',
               type: 'line',
@@ -190,11 +219,11 @@ export function TripMap({
         }
       })()
 
-      map.addSource('trip-route', {
+      mapInstance.addSource('trip-route', {
         type: 'geojson',
-        data: buildRouteGeoJSON(waypointsRef.current),
+        data: buildRouteGeoJSON(routeCoordsRef.current),
       })
-      map.addSource('trip-waypoints', {
+      mapInstance.addSource('trip-waypoints', {
         type: 'geojson',
         data: buildWaypointsGeoJSON(
           waypointsRef.current,
@@ -203,7 +232,7 @@ export function TripMap({
         ),
       })
 
-      map.addLayer({
+      mapInstance.addLayer({
         id: 'trip-route-line',
         type: 'line',
         source: 'trip-route',
@@ -214,7 +243,7 @@ export function TripMap({
           'line-opacity': 0.88,
         },
       })
-      map.addLayer({
+      mapInstance.addLayer({
         id: 'trip-waypoints-circle',
         type: 'circle',
         source: 'trip-waypoints',
@@ -235,7 +264,7 @@ export function TripMap({
           'circle-stroke-color': '#ffffff',
         },
       })
-      map.addLayer({
+      mapInstance.addLayer({
         id: 'trip-waypoints-label',
         type: 'symbol',
         source: 'trip-waypoints',
@@ -258,12 +287,12 @@ export function TripMap({
         const id = e.features?.[0]?.properties?.id
         if (typeof id === 'string') onSelectRef.current(id)
       }
-      map.on('click', 'trip-waypoints-circle', onWaypointClick)
-      map.on('mouseenter', 'trip-waypoints-circle', () => {
-        map.getCanvas().style.cursor = 'pointer'
+      mapInstance.on('click', 'trip-waypoints-circle', onWaypointClick)
+      mapInstance.on('mouseenter', 'trip-waypoints-circle', () => {
+        mapInstance.getCanvas().style.cursor = 'pointer'
       })
-      map.on('mouseleave', 'trip-waypoints-circle', () => {
-        map.getCanvas().style.cursor = ''
+      mapInstance.on('mouseleave', 'trip-waypoints-circle', () => {
+        mapInstance.getCanvas().style.cursor = ''
       })
 
       syncTripData()
@@ -272,21 +301,23 @@ export function TripMap({
       if (pos) {
         markerRef.current = new maplibregl.Marker({ color: '#dc2626' })
           .setLngLat([pos.lng, pos.lat])
-          .addTo(map)
+          .addTo(mapInstance)
       }
     })
+    })()
 
     return () => {
+      cancelled = true
       markerRef.current?.remove()
       markerRef.current = null
-      map.remove()
+      map?.remove()
       mapRef.current = null
     }
   }, [basemap.styleUrl, basemap.hasTerrainHint])
 
   useEffect(() => {
     syncTripData()
-  }, [waypoints, visitedWaypointIds, selectedWaypointId])
+  }, [waypoints, visitedWaypointIds, selectedWaypointId, routeLineCoordinates])
 
   useEffect(() => {
     const map = mapRef.current
