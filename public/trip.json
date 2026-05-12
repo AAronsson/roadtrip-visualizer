@@ -5,119 +5,256 @@
       "name": "Fjugesta",
       "lat": 59.1739,
       "lng": 14.8733,
-      "countryCode": "SE"
+      "countryCode": "SE",
+      "priority": 0
     },
     {
       "id": "malmo",
       "name": "Malmö",
       "lat": 55.605,
       "lng": 12.998,
-      "countryCode": "SE"
+      "countryCode": "SE",
+      "priority": 0
     },
     {
       "id": "rodby",
       "name": "Rödby",
       "lat": 54.6853,
       "lng": 11.3869,
-      "countryCode": "DK"
+      "countryCode": "DK",
+      "priority": 0
     },
     {
       "id": "puttgarden",
       "name": "Puttgarden",
       "lat": 54.4826,
       "lng": 11.2202,
-      "countryCode": "DE"
+      "countryCode": "DE",
+      "priority": 0,
+      "date": "2026-05-26"
     },
     {
-      "id": "munich",
-      "name": "Munich",
-      "lat": 48.1351,
-      "lng": 11.582,
-      "countryCode": "DE"
+      "id": "primark-hamburg",
+      "name": "Primark Hamburg (Billstedt-Center)",
+      "lat": 53.5432,
+      "lng": 10.1018,
+      "countryCode": "DE",
+      "priority": 3
     },
     {
-      "id": "innsbruck",
-      "name": "Innsbruck",
-      "lat": 47.2692,
-      "lng": 11.4041,
-      "countryCode": "AT"
+      "id": "nurburgring",
+      "name": "Nürburgring",
+      "lat": 50.3356,
+      "lng": 6.9475,
+      "countryCode": "DE",
+      "priority": 3,
+      "plannedDate": "2026-05-27"
     },
     {
-      "id": "dolomites",
-      "name": "Dolomites",
-      "lat": 46.5369,
-      "lng": 12.1357,
-      "countryCode": "IT"
+      "id": "moseldalen",
+      "name": "Moseldalen",
+      "lat": 50.1444,
+      "lng": 7.166,
+      "countryCode": "DE",
+      "priority": 3,
+      "plannedDate": "2026-05-27"
     },
     {
-      "id": "lake-garda",
-      "name": "Lake Garda",
-      "lat": 45.63,
-      "lng": 10.67,
-      "countryCode": "IT"
+      "id": "volvo-konz",
+      "name": "Volvo CE (Konz)",
+      "lat": 49.6831,
+      "lng": 6.5713,
+      "countryCode": "DE",
+      "priority": 3
     },
     {
-      "id": "lake-como",
-      "name": "Lake Como",
-      "lat": 45.987,
-      "lng": 9.261,
-      "countryCode": "IT"
+      "id": "luxembourg",
+      "name": "Luxembourg",
+      "lat": 49.6116,
+      "lng": 6.1296,
+      "countryCode": "LU",
+      "priority": 3
+    },
+    {
+      "id": "bourg-en-bresse",
+      "name": "Bourg-en-Bresse",
+      "lat": 46.2044,
+      "lng": 5.2289,
+      "countryCode": "FR",
+      "priority": 3,
+      "plannedDate": "2026-05-28"
+    },
+    {
+      "id": "chamonix",
+      "name": "Chamonix",
+      "lat": 45.9237,
+      "lng": 6.8694,
+      "countryCode": "FR",
+      "priority": 2,
+      "plannedDate": "2026-05-29"
+    },
+    {
+      "id": "avignon",
+      "name": "Avignon",
+      "lat": 43.9493,
+      "lng": 4.8055,
+      "countryCode": "FR",
+      "priority": 2,
+      "plannedDate": "2026-05-30"
+    },
+    {
+      "id": "pont-du-gard",
+      "name": "Pont du Gard",
+      "lat": 43.9472,
+      "lng": 4.535,
+      "countryCode": "FR",
+      "priority": 3
     },
     {
       "id": "nice",
       "name": "Nice",
-      "lat": 43.7102,
-      "lng": 7.262,
-      "countryCode": "FR"
+      "lat": 43.6117,
+      "lng": 7.1235,
+      "countryCode": "FR",
+      "priority": 1,
+      "plannedDate": "2026-05-31"
     },
     {
       "id": "monaco",
       "name": "Monaco",
       "lat": 43.7384,
       "lng": 7.4246,
-      "countryCode": "MC"
+      "countryCode": "MC",
+      "priority": 1,
+      "latestDate": "2026-06-02"
     },
     {
-      "id": "turin",
-      "name": "Turin",
-      "lat": 45.0703,
-      "lng": 7.6869,
-      "countryCode": "IT"
+      "id": "nice-2",
+      "name": "Nice",
+      "lat": 43.6117,
+      "lng": 7.1235,
+      "countryCode": "FR",
+      "priority": 1,
+      "plannedDate": "2026-06-01"
     },
     {
-      "id": "geneva",
-      "name": "Geneva",
-      "lat": 46.2044,
-      "lng": 6.1432,
-      "countryCode": "CH"
+      "id": "verdon-gorge",
+      "name": "Verdon Gorge",
+      "lat": 43.751,
+      "lng": 6.414,
+      "countryCode": "FR",
+      "priority": 2
     },
     {
-      "id": "lille",
-      "name": "Lille",
-      "lat": 50.6292,
-      "lng": 3.0573,
-      "countryCode": "FR"
+      "id": "nice-3",
+      "name": "Nice",
+      "lat": 43.6117,
+      "lng": 7.1235,
+      "countryCode": "FR",
+      "priority": 1,
+      "plannedDate": "2026-06-02"
     },
     {
-      "id": "brussels",
-      "name": "Brussels",
-      "lat": 50.8503,
-      "lng": 4.3488,
-      "countryCode": "BE"
+      "id": "lake-como",
+      "name": "Lake Como",
+      "lat": 45.987,
+      "lng": 9.261,
+      "countryCode": "IT",
+      "priority": 2,
+      "plannedDate": "2026-06-03"
     },
     {
-      "id": "amsterdam",
-      "name": "Amsterdam",
-      "lat": 52.3676,
-      "lng": 4.9041,
-      "countryCode": "NL"
+      "id": "monza",
+      "name": "Monza",
+      "lat": 45.5845,
+      "lng": 9.2744,
+      "countryCode": "IT",
+      "priority": 3
+    },
+    {
+      "id": "lake-garda",
+      "name": "Lake Garda",
+      "lat": 45.63,
+      "lng": 10.67,
+      "countryCode": "IT",
+      "priority": 2,
+      "plannedDate": "2026-06-04"
+    },
+    {
+      "id": "dolomites-west",
+      "name": "Dolomites — Selva di Val Gardena",
+      "lat": 46.5575,
+      "lng": 11.7626,
+      "countryCode": "IT",
+      "priority": 1,
+      "plannedDate": "2026-06-05"
+    },
+    {
+      "id": "dolomites-east",
+      "name": "Dolomites — Cortina d'Ampezzo",
+      "lat": 46.5371,
+      "lng": 12.1378,
+      "countryCode": "IT",
+      "priority": 1,
+      "plannedDate": "2026-06-06"
+    },
+    {
+      "id": "grossglockner",
+      "name": "Grossglockner",
+      "lat": 47.0744,
+      "lng": 12.8336,
+      "countryCode": "AT",
+      "priority": 2
+    },
+    {
+      "id": "munchen",
+      "name": "München",
+      "lat": 48.1351,
+      "lng": 11.582,
+      "countryCode": "DE",
+      "priority": 3,
+      "plannedDate": "2026-06-07"
+    },
+    {
+      "id": "primark-hannover",
+      "name": "Primark Hannover (Ernst-August-Galerie)",
+      "lat": 52.3759,
+      "lng": 9.7407,
+      "countryCode": "DE",
+      "priority": 3
     },
     {
       "id": "puttgarden-return",
       "name": "Puttgarden",
       "lat": 54.4826,
       "lng": 11.2202,
-      "countryCode": "DE"
+      "countryCode": "DE",
+      "priority": 0,
+      "date": "2026-06-08"
+    },
+    {
+      "id": "rodby-return",
+      "name": "Rödby",
+      "lat": 54.6853,
+      "lng": 11.3869,
+      "countryCode": "DK",
+      "priority": 0
+    },
+    {
+      "id": "malmo-return",
+      "name": "Malmö",
+      "lat": 55.605,
+      "lng": 12.998,
+      "countryCode": "SE",
+      "priority": 0
+    },
+    {
+      "id": "fjugesta-return",
+      "name": "Fjugesta",
+      "lat": 59.1739,
+      "lng": 14.8733,
+      "countryCode": "SE",
+      "priority": 0
     }
   ]
 }

@@ -356,3 +356,140 @@ body {
   border: 0;
 }
 
+.itinerary {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px
+    max(24px, env(safe-area-inset-bottom));
+}
+
+.itinerary__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.itinerary__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.itinerary__empty {
+  color: var(--text-muted);
+}
+
+.itinerary__days {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itinerary-day {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.itinerary-day--past {
+  opacity: 0.55;
+}
+
+.itinerary-day--today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-muted);
+}
+
+.itinerary-day__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.itinerary-day__weekday {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.itinerary-day__date {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.itinerary-day__badge {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bg);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.itinerary-day__drive {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.itinerary-day__stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itinerary-stop {
+  padding: 4px 0;
+}
+
+.itinerary-stop__label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.itinerary-stop__label input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.itinerary-stop__flag {
+  display: block;
+  border-radius: 2px;
+}
+
+.itinerary-stop__flag--empty {
+  width: 20px;
+  height: 15px;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.itinerary-stop__name {
+  flex: 1;
+  font-size: 15px;
+}
+
+.itinerary-stop--done .itinerary-stop__name {
+  color: var(--done);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.itinerary-stop__role {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+

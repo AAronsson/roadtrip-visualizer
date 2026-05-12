@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TripMap } from './components/TripMap'
 import { WaypointDrawer } from './components/WaypointDrawer'
+import { ItineraryView } from './components/ItineraryView'
 import type { ParsedTripImport } from './lib/tripImport'
 import { mergeTripWaypoints } from './lib/tripMerge'
 import { fetchRoadRouteCoordinates } from './lib/osrmRoute'
@@ -11,6 +12,12 @@ import {
   savePersistedState,
 } from './lib/tripStorage'
 import type { PersistedTripState, TripFile, Waypoint } from './types/trip'
+
+type View = 'map' | 'itinerary'
+
+function viewFromHash(): View {
+  return window.location.hash.startsWith('#/itinerary') ? 'itinerary' : 'map'
+}
 
 const emptyPersisted = (): PersistedTripState => ({
   visitedWaypointIds: [],
@@ -45,6 +52,13 @@ export default function App() {
   const [geoActive, setGeoActive] = useState(false)
   const watchIdRef = useRef<number | null>(null)
   const [recenterOnUserKey, setRecenterOnUserKey] = useState(0)
+  const [view, setView] = useState<View>(viewFromHash)
+
+  useEffect(() => {
+    const onHashChange = () => setView(viewFromHash())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   useEffect(() => {
     void fetch(`${import.meta.env.BASE_URL}trip.json`)
@@ -251,6 +265,19 @@ export default function App() {
       <div className="app-loading">
         <p>Loading trip…</p>
       </div>
+    )
+  }
+
+  if (view === 'itinerary') {
+    return (
+      <ItineraryView
+        waypoints={waypoints}
+        visitedWaypointIds={persisted.visitedWaypointIds}
+        onToggleVisited={toggleVisited}
+        onBackToMap={() => {
+          window.location.hash = ''
+        }}
+      />
     )
   }
 
