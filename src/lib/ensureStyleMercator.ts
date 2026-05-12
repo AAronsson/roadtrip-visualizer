@@ -1,4 +1,5 @@
 import type { StyleSpecification } from 'maplibre-gl'
+import { simplifyBasemapForRoadtrips } from './roadtripBasemap'
 
 /**
  * MapLibre GL 5+ expects a valid `projection` when migrating styles. Some
@@ -18,5 +19,5 @@ export async function fetchStyleJsonWithMercator(
   if (style.projection == null) {
     style.projection = { type: 'mercator' }
   }
-  return style
+  return simplifyBasemapForRoadtrips(style)
 }
