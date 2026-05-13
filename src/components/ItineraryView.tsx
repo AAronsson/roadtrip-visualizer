@@ -172,7 +172,7 @@ export function ItineraryView({
                     return (
                       <li
                         key={w.id}
-                        className={`itinerary-stop ${visited ? 'itinerary-stop--done' : ''}`}
+                        className={`itinerary-stop ${visited ? 'itinerary-stop--done' : ''} ${w.priority === 3 ? 'itinerary-stop--preliminary' : ''}`}
                       >
                         <label className="itinerary-stop__label">
                           <input

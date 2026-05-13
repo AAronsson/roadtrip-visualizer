@@ -143,7 +143,7 @@ export function WaypointDrawer({
               return (
                 <li
                   key={w.id}
-                  className={`waypoint-item ${visited ? 'waypoint-item--done' : ''}`}
+                  className={`waypoint-item ${visited ? 'waypoint-item--done' : ''} ${w.priority === 3 ? 'waypoint-item--preliminary' : ''}`}
                 >
                   {f ? (
                     <img

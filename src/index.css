@@ -173,6 +173,10 @@ body {
   border-color: rgba(34, 197, 94, 0.45);
 }
 
+.waypoint-item--preliminary:not(.waypoint-item--done) {
+  opacity: 0.55;
+}
+
 .waypoint-item__flag {
   display: block;
   border-radius: 2px;
@@ -486,6 +490,10 @@ body {
   color: var(--done);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
+}
+
+.itinerary-stop--preliminary:not(.itinerary-stop--done) {
+  opacity: 0.55;
 }
 
 .itinerary-stop__role {

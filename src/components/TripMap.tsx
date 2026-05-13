@@ -27,6 +27,7 @@ function buildWaypointsGeoJSON(
         shortName: w.name.length > 16 ? `${w.name.slice(0, 14)}…` : w.name,
         visited: visitedIds.has(w.id),
         selected: w.id === selectedId,
+        preliminary: w.priority === 3,
       },
       geometry: { type: 'Point' as const, coordinates: [w.lng, w.lat] },
     })),
@@ -262,6 +263,22 @@ export function TripMap({
             2,
           ],
           'circle-stroke-color': '#ffffff',
+          'circle-opacity': [
+            'case',
+            ['get', 'visited'],
+            1,
+            ['get', 'preliminary'],
+            0.55,
+            1,
+          ],
+          'circle-stroke-opacity': [
+            'case',
+            ['get', 'visited'],
+            1,
+            ['get', 'preliminary'],
+            0.55,
+            1,
+          ],
         },
       })
       mapInstance.addLayer({
@@ -279,6 +296,14 @@ export function TripMap({
           'text-color': '#0f172a',
           'text-halo-color': '#ffffff',
           'text-halo-width': 1.25,
+          'text-opacity': [
+            'case',
+            ['get', 'visited'],
+            1,
+            ['get', 'preliminary'],
+            0.6,
+            1,
+          ],
         },
       })
 
