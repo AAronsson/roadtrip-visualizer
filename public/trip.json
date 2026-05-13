@@ -94,6 +94,14 @@
       "plannedDate": "2026-05-29"
     },
     {
+      "id": "pont-du-gard",
+      "name": "Pont du Gard",
+      "lat": 43.9472,
+      "lng": 4.535,
+      "countryCode": "FR",
+      "priority": 3
+    },
+    {
       "id": "avignon",
       "name": "Avignon",
       "lat": 43.9493,
@@ -101,14 +109,6 @@
       "countryCode": "FR",
       "priority": 2,
       "plannedDate": "2026-05-30"
-    },
-    {
-      "id": "pont-du-gard",
-      "name": "Pont du Gard",
-      "lat": 43.9472,
-      "lng": 4.535,
-      "countryCode": "FR",
-      "priority": 3
     },
     {
       "id": "nice",
@@ -224,6 +224,14 @@
       "priority": 3
     },
     {
+      "id": "lubeck",
+      "name": "Lübeck",
+      "lat": 53.8655,
+      "lng": 10.6866,
+      "countryCode": "DE",
+      "priority": 3
+    },
+    {
       "id": "puttgarden-return",
       "name": "Puttgarden",
       "lat": 54.4826,
@@ -246,7 +254,8 @@
       "lat": 55.605,
       "lng": 12.998,
       "countryCode": "SE",
-      "priority": 0
+      "priority": 0,
+      "date": "2026-06-09"
     },
     {
       "id": "fjugesta-return",
@@ -254,7 +263,8 @@
       "lat": 59.1739,
       "lng": 14.8733,
       "countryCode": "SE",
-      "priority": 0
+      "priority": 0,
+      "plannedDate": "2026-06-09"
     }
   ]
 }

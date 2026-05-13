@@ -20,7 +20,8 @@ const DAILY_DRIVE: Record<string, { km: number; hours: number }> = {
   '2026-06-05': { km: 190, hours: 2.4 },
   '2026-06-06': { km: 60, hours: 1.1 },
   '2026-06-07': { km: 340, hours: 5.4 },
-  '2026-06-08': { km: 930, hours: 9.5 },
+  '2026-06-08': { km: 930, hours: 9.8 },
+  '2026-06-09': { km: 710, hours: 9.3 },
 }
 
 type ItineraryViewProps = {
@@ -85,7 +86,7 @@ function groupByDay(waypoints: Waypoint[]): DayGroup[] {
       if (existing) {
         existing.waypoints.push(...buffer, w)
         if (w.date) existing.hasFixedDate = true
-        if (!existing.sleepWaypoint) existing.sleepWaypoint = w
+        existing.sleepWaypoint = w
       } else {
         groups.push({
           date: d,
