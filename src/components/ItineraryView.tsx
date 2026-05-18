@@ -1,4 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  fetchDayWeather,
+  formatDayWeather,
+  type DayWeather,
+} from '../lib/weather'
 import type { Waypoint } from '../types/trip'
 
 /**
@@ -124,6 +129,41 @@ export function ItineraryView({
 }: ItineraryViewProps) {
   const days = useMemo(() => groupByDay(waypoints), [waypoints])
   const today = todayIsoDate()
+  const [weatherByDate, setWeatherByDate] = useState<
+    Record<string, DayWeather>
+  >({})
+
+  useEffect(() => {
+    let cancelled = false
+    const withSleep = days.filter((d) => d.sleepWaypoint)
+    if (withSleep.length === 0) {
+      setWeatherByDate({})
+      return
+    }
+
+    void Promise.all(
+      withSleep.map(async (day) => {
+        const sleep = day.sleepWaypoint!
+        const weather = await fetchDayWeather(
+          sleep.lat,
+          sleep.lng,
+          day.date,
+        )
+        return { date: day.date, weather }
+      }),
+    ).then((results) => {
+      if (cancelled) return
+      const next: Record<string, DayWeather> = {}
+      for (const { date, weather } of results) {
+        if (weather) next[date] = weather
+      }
+      setWeatherByDate(next)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [days])
 
   return (
     <div className="itinerary">
@@ -146,6 +186,9 @@ export function ItineraryView({
             const isPast = day.date < today
             const isToday = day.date === today
             const fmt = formatDate(day.date)
+            const weather = weatherByDate[day.date]
+            const wx = weather ? formatDayWeather(weather) : null
+            const drive = DAILY_DRIVE[day.date]
             return (
               <li
                 key={day.date}
@@ -157,11 +200,32 @@ export function ItineraryView({
                   {day.hasFixedDate ? (
                     <span className="itinerary-day__badge">Fixed</span>
                   ) : null}
-                  {DAILY_DRIVE[day.date] ? (
-                    <span className="itinerary-day__drive">
-                      ~{DAILY_DRIVE[day.date].km} km · ~
-                      {DAILY_DRIVE[day.date].hours} h
-                    </span>
+                  {drive || wx ? (
+                    <div className="itinerary-day__meta">
+                      {drive ? (
+                        <span className="itinerary-day__drive">
+                          ~{drive.km} km · ~{drive.hours} h
+                        </span>
+                      ) : null}
+                      {wx ? (
+                        <span
+                          className="itinerary-day__weather"
+                          title={
+                            wx.wind
+                              ? `Max/min · vind upp till ${wx.wind}`
+                              : 'Max/min'
+                          }
+                        >
+                          <span className="itinerary-day__weather-symbol" aria-hidden>
+                            {wx.symbol}
+                          </span>
+                          <span>{wx.temps}</span>
+                          {wx.wind ? (
+                            <span className="itinerary-day__wind">{wx.wind}</span>
+                          ) : null}
+                        </span>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
                 <ul className="itinerary-day__stops">

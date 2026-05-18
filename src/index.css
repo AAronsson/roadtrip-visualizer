@@ -140,6 +140,13 @@ body {
   font-weight: 600;
 }
 
+.waypoint-drawer__itinerary {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 12px;
+  text-decoration: none;
+}
+
 .waypoint-drawer__hint {
   margin: 0 0 16px;
   font-size: 13px;
@@ -318,12 +325,6 @@ body {
   color: var(--danger);
 }
 
-.import-ok {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--done);
-}
-
 .hit-list {
   margin: 8px 0 0;
   padding: 0;
@@ -439,11 +440,39 @@ body {
   border-radius: 999px;
 }
 
-.itinerary-day__drive {
+.itinerary-day__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   margin-left: auto;
+}
+
+.itinerary-day__drive {
   font-size: 13px;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+.itinerary-day__weather {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.itinerary-day__weather-symbol {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.itinerary-day__wind {
+  font-size: 12px;
+  opacity: 0.9;
 }
 
 .itinerary-day__stops {

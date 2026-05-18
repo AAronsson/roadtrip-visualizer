@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TripMap } from './components/TripMap'
 import { WaypointDrawer } from './components/WaypointDrawer'
 import { ItineraryView } from './components/ItineraryView'
-import type { ParsedTripImport } from './lib/tripImport'
-import { mergeTripWaypoints } from './lib/tripMerge'
+import { mergeTripWaypoints, waypointsHidingVisited } from './lib/tripMerge'
 import { fetchRoadRouteCoordinates } from './lib/osrmRoute'
 import { resolveBasemap } from './lib/mapStyle'
 import {
@@ -11,7 +10,7 @@ import {
   loadPersistedState,
   savePersistedState,
 } from './lib/tripStorage'
-import type { PersistedTripState, TripFile, Waypoint } from './types/trip'
+import type { PersistedTripState, TripFile } from './types/trip'
 
 type View = 'map' | 'itinerary'
 
@@ -24,17 +23,6 @@ const emptyPersisted = (): PersistedTripState => ({
   customWaypoints: [],
   removedDefaultIds: [],
 })
-
-function normalizeWaypointForExport(w: Waypoint): Waypoint {
-  const out: Waypoint = {
-    id: w.id,
-    name: w.name,
-    lat: w.lat,
-    lng: w.lng,
-  }
-  if (w.countryCode) out.countryCode = w.countryCode
-  return out
-}
 
 export default function App() {
   const basemap = useMemo(() => resolveBasemap(), [])
@@ -81,17 +69,31 @@ export default function App() {
     return mergeTripWaypoints(tripFile, persisted)
   }, [tripFile, persisted])
 
+  const activeWaypoints = useMemo(
+    () => waypointsHidingVisited(waypoints, persisted.visitedWaypointIds),
+    [waypoints, persisted.visitedWaypointIds],
+  )
+
+  useEffect(() => {
+    if (
+      selectedWaypointId &&
+      !activeWaypoints.some((w) => w.id === selectedWaypointId)
+    ) {
+      setSelectedWaypointId(null)
+    }
+  }, [activeWaypoints, selectedWaypointId])
+
   const waypointSig = useMemo(
-    () => waypoints.map((w) => `${w.id}:${w.lat},${w.lng}`).join('|'),
-    [waypoints],
+    () => activeWaypoints.map((w) => `${w.id}:${w.lat},${w.lng}`).join('|'),
+    [activeWaypoints],
   )
 
   const straightRouteCoords = useMemo(
     () =>
-      waypoints.length < 2
+      activeWaypoints.length < 2
         ? []
-        : waypoints.map((w) => [w.lng, w.lat] as [number, number]),
-    [waypoints],
+        : activeWaypoints.map((w) => [w.lng, w.lat] as [number, number]),
+    [activeWaypoints],
   )
 
   const [osrmRouteMatch, setOsrmRouteMatch] = useState<{
@@ -100,10 +102,10 @@ export default function App() {
   } | null>(null)
 
   useEffect(() => {
-    if (waypoints.length < 2) return
+    if (activeWaypoints.length < 2) return
     const sigAtStart = waypointSig
     let cancelled = false
-    void fetchRoadRouteCoordinates(waypoints).then((coords) => {
+    void fetchRoadRouteCoordinates(activeWaypoints).then((coords) => {
       if (cancelled) return
       if (coords.length >= 2) {
         setOsrmRouteMatch({ sig: sigAtStart, coords })
@@ -112,10 +114,10 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [waypoints, waypointSig])
+  }, [activeWaypoints, waypointSig])
 
   const routeLineCoordinates =
-    waypoints.length < 2
+    activeWaypoints.length < 2
       ? []
       : osrmRouteMatch?.sig === waypointSig && osrmRouteMatch.coords.length >= 2
         ? osrmRouteMatch.coords
@@ -161,45 +163,6 @@ export default function App() {
       setSelectedWaypointId((cur) => (cur === id ? null : cur))
     },
     [persisted, updatePersisted],
-  )
-
-  const addWaypoint = useCallback(
-    (w: Waypoint) => {
-      if (persisted.customWaypoints.some((c) => c.id === w.id)) return
-      updatePersisted({
-        ...persisted,
-        customWaypoints: [...persisted.customWaypoints, w],
-      })
-    },
-    [persisted, updatePersisted],
-  )
-
-  const exportJson = useCallback(() => {
-    const payload = {
-      waypoints: waypoints.map(normalizeWaypointForExport),
-      visitedWaypointIds: persisted.visitedWaypointIds,
-    }
-    const text = `${JSON.stringify(payload, null, 2)}\n`
-    const blob = new Blob([text], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'trip-export.json'
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [waypoints, persisted.visitedWaypointIds])
-
-  const importTripSnapshot = useCallback(
-    (parsed: ParsedTripImport) => {
-      if (!tripFile) return
-      const hideAllDefault = tripFile.waypoints.map((w) => w.id)
-      updatePersisted({
-        removedDefaultIds: hideAllDefault,
-        customWaypoints: parsed.waypoints,
-        visitedWaypointIds: parsed.visitedWaypointIds,
-      })
-    },
-    [tripFile, updatePersisted],
   )
 
   const clearDeviceData = useCallback(() => {
@@ -271,7 +234,7 @@ export default function App() {
   if (view === 'itinerary') {
     return (
       <ItineraryView
-        waypoints={waypoints}
+        waypoints={activeWaypoints}
         visitedWaypointIds={persisted.visitedWaypointIds}
         onToggleVisited={toggleVisited}
         onBackToMap={() => {
@@ -285,7 +248,7 @@ export default function App() {
     <div className="app-shell">
       <TripMap
         basemap={basemap}
-        waypoints={waypoints}
+        waypoints={activeWaypoints}
         routeLineCoordinates={routeLineCoordinates}
         visitedWaypointIds={persisted.visitedWaypointIds}
         selectedWaypointId={selectedWaypointId}
@@ -305,14 +268,11 @@ export default function App() {
       <WaypointDrawer
         open={drawerOpen}
         onToggleOpen={() => setDrawerOpen((o) => !o)}
-        waypoints={waypoints}
+        waypoints={activeWaypoints}
         persisted={persisted}
         defaultWaypointIds={defaultWaypointIds}
         onToggleVisited={toggleVisited}
         onRemoveWaypoint={removeWaypoint}
-        onAddWaypoint={addWaypoint}
-        onExportJson={exportJson}
-        onImportTrip={importTripSnapshot}
         onClearDeviceData={clearDeviceData}
         geoActive={geoActive}
         geoError={geoError}

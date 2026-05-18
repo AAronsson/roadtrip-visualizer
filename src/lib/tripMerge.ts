@@ -18,3 +18,14 @@ export function mergeTripWaypoints(
 export function isVisited(waypointId: string, persisted: PersistedTripState): boolean {
   return persisted.visitedWaypointIds.includes(waypointId)
 }
+
+const KEEP_WHEN_VISITED = new Set(['fjugesta', 'fjugesta-return'])
+
+/** Hide visited stops from map/list/route, but always keep Fjugesta. */
+export function waypointsHidingVisited(
+  waypoints: Waypoint[],
+  visitedWaypointIds: string[],
+): Waypoint[] {
+  const visited = new Set(visitedWaypointIds)
+  return waypoints.filter((w) => KEEP_WHEN_VISITED.has(w.id) || !visited.has(w.id))
+}

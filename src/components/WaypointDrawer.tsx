@@ -1,9 +1,3 @@
-import { useId, useRef, useState } from 'react'
-import {
-  parseTripImportJson,
-  type ParsedTripImport,
-} from '../lib/tripImport'
-import { searchPlaces, type GeocodeHit } from '../lib/geocode'
 import type { PersistedTripState, Waypoint } from '../types/trip'
 
 function flagUrl(countryCode: string | undefined): string | null {
@@ -19,9 +13,6 @@ type WaypointDrawerProps = {
   defaultWaypointIds: Set<string>
   onToggleVisited: (id: string) => void
   onRemoveWaypoint: (id: string) => void
-  onAddWaypoint: (w: Waypoint) => void
-  onExportJson: () => void
-  onImportTrip: (parsed: ParsedTripImport) => void
   onClearDeviceData: () => void
   geoActive: boolean
   geoError: string | null
@@ -39,9 +30,6 @@ export function WaypointDrawer({
   defaultWaypointIds,
   onToggleVisited,
   onRemoveWaypoint,
-  onAddWaypoint,
-  onExportJson,
-  onImportTrip,
   onClearDeviceData,
   geoActive,
   geoError,
@@ -50,67 +38,6 @@ export function WaypointDrawer({
   onCenterOnUser,
   hasUserPosition,
 }: WaypointDrawerProps) {
-  const formId = useId()
-  const importInputRef = useRef<HTMLInputElement>(null)
-  const [importMessage, setImportMessage] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [latStr, setLatStr] = useState('')
-  const [lngStr, setLngStr] = useState('')
-  const [hits, setHits] = useState<GeocodeHit[]>([])
-  const [searching, setSearching] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(null)
-
-  const runSearch = async () => {
-    setSearchError(null)
-    setSearching(true)
-    setHits([])
-    try {
-      const results = await searchPlaces(query)
-      setHits(results)
-      if (results.length === 0) setSearchError('No results — try another name or use coordinates.')
-    } catch (e) {
-      setSearchError(e instanceof Error ? e.message : 'Search failed')
-    } finally {
-      setSearching(false)
-    }
-  }
-
-  const addFromCoordinates = () => {
-    const lat = parseFloat(latStr.replace(',', '.'))
-    const lng = parseFloat(lngStr.replace(',', '.'))
-    if (Number.isNaN(lat) || Number.isNaN(lng)) {
-      setSearchError('Enter valid latitude and longitude.')
-      return
-    }
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      setSearchError('Coordinates out of range.')
-      return
-    }
-    const id = `custom-${Date.now()}`
-    onAddWaypoint({
-      id,
-      name: `${lat.toFixed(2)}, ${lng.toFixed(2)}`,
-      lat,
-      lng,
-    })
-    setLatStr('')
-    setLngStr('')
-    setSearchError(null)
-  }
-
-  const pickHit = (h: GeocodeHit) => {
-    const id = `custom-${Date.now()}`
-    onAddWaypoint({
-      id,
-      name: h.displayName.split(',').slice(0, 2).join(',').trim() || h.displayName,
-      lat: h.lat,
-      lng: h.lng,
-      countryCode: h.countryCode,
-    })
-    setHits([])
-    setQuery('')
-  }
-
   return (
     <>
       <button
@@ -130,10 +57,9 @@ export function WaypointDrawer({
       >
         <div className="waypoint-drawer__inner">
           <h2 className="waypoint-drawer__title">Stops</h2>
-          <p className="waypoint-drawer__hint">
-            Green = done. Blue = upcoming. Edit canonical stops in{' '}
-            <code>public/trip.json</code> and redeploy.
-          </p>
+          <a href="#/itinerary" className="button button--secondary waypoint-drawer__itinerary">
+            Itinerary →
+          </a>
 
           <ul className="waypoint-list">
             {waypoints.map((w) => {
@@ -185,72 +111,12 @@ export function WaypointDrawer({
             })}
           </ul>
 
+          {/*
           <section className="drawer-section">
             <h3>Add stop</h3>
-            <div className="add-search">
-              <label htmlFor={`${formId}-q`} className="sr-only">
-                Search place name
-              </label>
-              <input
-                id={`${formId}-q`}
-                type="search"
-                className="input"
-                placeholder="City or place name"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), void runSearch())}
-              />
-              <button
-                type="button"
-                className="button"
-                onClick={() => void runSearch()}
-                disabled={searching || !query.trim()}
-              >
-                {searching ? '…' : 'Search'}
-              </button>
-            </div>
-            {searchError ? <p className="field-error">{searchError}</p> : null}
-            {hits.length > 0 ? (
-              <ul className="hit-list">
-                {hits.map((h, i) => (
-                  <li key={`${h.lat},${h.lng},${i}`}>
-                    <button type="button" className="hit-button" onClick={() => pickHit(h)}>
-                      {h.displayName}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-
-            <p className="coord-label">Or coordinates (WGS84)</p>
-            <div className="coord-row">
-              <label htmlFor={`${formId}-lat`} className="sr-only">
-                Latitude
-              </label>
-              <input
-                id={`${formId}-lat`}
-                className="input input--narrow"
-                placeholder="Lat"
-                value={latStr}
-                onChange={(e) => setLatStr(e.target.value)}
-                inputMode="decimal"
-              />
-              <label htmlFor={`${formId}-lng`} className="sr-only">
-                Longitude
-              </label>
-              <input
-                id={`${formId}-lng`}
-                className="input input--narrow"
-                placeholder="Lng"
-                value={lngStr}
-                onChange={(e) => setLngStr(e.target.value)}
-                inputMode="decimal"
-              />
-              <button type="button" className="button" onClick={addFromCoordinates}>
-                Add
-              </button>
-            </div>
+            … search + coordinates …
           </section>
+          */}
 
           <section className="drawer-section">
             <h3>Your position</h3>
@@ -280,51 +146,6 @@ export function WaypointDrawer({
           </section>
 
           <section className="drawer-section drawer-section--actions">
-            <input
-              ref={importInputRef}
-              type="file"
-              accept="application/json,.json"
-              className="sr-only"
-              aria-label="Choose trip JSON file to import"
-              onChange={async (e) => {
-                const input = e.target
-                const file = input.files?.[0]
-                input.value = ''
-                if (!file) return
-                setImportMessage(null)
-                try {
-                  const text = await file.text()
-                  let raw: unknown
-                  try {
-                    raw = JSON.parse(text) as unknown
-                  } catch {
-                    throw new Error('File is not valid JSON.')
-                  }
-                  const parsed = parseTripImportJson(raw)
-                  onImportTrip(parsed)
-                  setImportMessage('Imported on this device.')
-                } catch (err) {
-                  setImportMessage(
-                    err instanceof Error ? err.message : 'Import failed.',
-                  )
-                }
-              }}
-            />
-            <button type="button" className="button" onClick={onExportJson}>
-              Export trip JSON
-            </button>
-            <button
-              type="button"
-              className="button button--secondary"
-              onClick={() => importInputRef.current?.click()}
-            >
-              Import trip JSON
-            </button>
-            {importMessage ? (
-              <p className={importMessage.startsWith('Imported') ? 'import-ok' : 'field-error'}>
-                {importMessage}
-              </p>
-            ) : null}
             <button
               type="button"
               className="button button--danger"
