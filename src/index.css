@@ -84,6 +84,34 @@ body {
   color: var(--accent);
 }
 
+.viewer-controls {
+  position: absolute;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(100% - 32px, 320px);
+  padding: 12px 14px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.viewer-controls__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.viewer-controls__meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .drawer-toggle {
   position: absolute;
   bottom: max(16px, env(safe-area-inset-bottom));

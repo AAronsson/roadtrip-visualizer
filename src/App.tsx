@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TripMap } from './components/TripMap'
+import { ViewerControls } from './components/ViewerControls'
 import { WaypointDrawer } from './components/WaypointDrawer'
 import { ItineraryView } from './components/ItineraryView'
 import { mergeTripWaypoints, waypointsHidingVisited } from './lib/tripMerge'
@@ -325,30 +326,41 @@ export default function App() {
         </div>
       ) : null}
 
-      <WaypointDrawer
-        open={drawerOpen}
-        onToggleOpen={() => setDrawerOpen((o) => !o)}
-        waypoints={waypoints}
-        persisted={persisted}
-        defaultWaypointIds={defaultWaypointIds}
-        onToggleVisited={viewOnlyCloud ? () => {} : toggleVisited}
-        onRemoveWaypoint={removeWaypoint}
-        onClearDeviceData={clearDeviceData}
-        geoActive={geoActive}
-        geoError={geoError}
-        onStartGeo={startGeo}
-        onStopGeo={stopGeo}
-        onCenterOnUser={centerOnUser}
-        hasUserPosition={userPosition != null}
-        cloudEnabled={isCloudSyncEnabled()}
-        viewOnlyCloud={viewOnlyCloud}
-        writeCloud={writeCloud}
-        cloudUpdatedAt={cloudUpdatedAt}
-        cloudMessage={cloudMessage}
-        cloudBusy={cloudBusy}
-        onRefreshFromCloud={refreshFromCloud}
-        onSaveToCloud={saveToCloud}
-      />
+      {viewOnlyCloud ? (
+        <ViewerControls
+          cloudUpdatedAt={cloudUpdatedAt}
+          cloudMessage={cloudMessage}
+          cloudBusy={cloudBusy}
+          hasUserPosition={userPosition != null}
+          onRefreshFromCloud={refreshFromCloud}
+          onCenterOnUser={centerOnUser}
+        />
+      ) : (
+        <WaypointDrawer
+          open={drawerOpen}
+          onToggleOpen={() => setDrawerOpen((o) => !o)}
+          waypoints={waypoints}
+          persisted={persisted}
+          defaultWaypointIds={defaultWaypointIds}
+          onToggleVisited={toggleVisited}
+          onRemoveWaypoint={removeWaypoint}
+          onClearDeviceData={clearDeviceData}
+          geoActive={geoActive}
+          geoError={geoError}
+          onStartGeo={startGeo}
+          onStopGeo={stopGeo}
+          onCenterOnUser={centerOnUser}
+          hasUserPosition={userPosition != null}
+          cloudEnabled={isCloudSyncEnabled()}
+          viewOnlyCloud={false}
+          writeCloud={writeCloud}
+          cloudUpdatedAt={cloudUpdatedAt}
+          cloudMessage={cloudMessage}
+          cloudBusy={cloudBusy}
+          onRefreshFromCloud={refreshFromCloud}
+          onSaveToCloud={saveToCloud}
+        />
+      )}
     </div>
   )
 }
