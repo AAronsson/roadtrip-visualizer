@@ -20,6 +20,14 @@ type WaypointDrawerProps = {
   onStopGeo: () => void
   onCenterOnUser: () => void
   hasUserPosition: boolean
+  cloudEnabled: boolean
+  viewOnlyCloud: boolean
+  writeCloud: boolean
+  cloudUpdatedAt: string | null
+  cloudMessage: string | null
+  cloudBusy: boolean
+  onRefreshFromCloud: () => void
+  onSaveToCloud: () => void
 }
 
 export function WaypointDrawer({
@@ -37,7 +45,24 @@ export function WaypointDrawer({
   onStopGeo,
   onCenterOnUser,
   hasUserPosition,
+  cloudEnabled,
+  viewOnlyCloud,
+  writeCloud,
+  cloudUpdatedAt,
+  cloudMessage,
+  cloudBusy,
+  onRefreshFromCloud,
+  onSaveToCloud,
 }: WaypointDrawerProps) {
+  const cloudTime =
+    cloudUpdatedAt &&
+    (() => {
+      try {
+        return new Date(cloudUpdatedAt).toLocaleString()
+      } catch {
+        return cloudUpdatedAt
+      }
+    })()
   return (
     <>
       <button
@@ -57,9 +82,42 @@ export function WaypointDrawer({
       >
         <div className="waypoint-drawer__inner">
           <h2 className="waypoint-drawer__title">Stops</h2>
+          {viewOnlyCloud ? (
+            <p className="waypoint-drawer__hint">Följer resan (läsläge)</p>
+          ) : null}
           <a href="#/itinerary" className="button button--secondary waypoint-drawer__itinerary">
             Itinerary →
           </a>
+
+          {cloudEnabled ? (
+            <section className="drawer-section">
+              <h3>Delad progress</h3>
+              {cloudTime ? (
+                <p className="waypoint-drawer__hint">Senast uppdaterad: {cloudTime}</p>
+              ) : null}
+              <div className="button-row">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  disabled={cloudBusy}
+                  onClick={onRefreshFromCloud}
+                >
+                  Hämta senaste
+                </button>
+                {writeCloud ? (
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={cloudBusy}
+                    onClick={onSaveToCloud}
+                  >
+                    Spara för familjen
+                  </button>
+                ) : null}
+              </div>
+              {cloudMessage ? <p className="waypoint-drawer__hint">{cloudMessage}</p> : null}
+            </section>
+          ) : null}
 
           <ul className="waypoint-list">
             {waypoints.map((w) => {
@@ -94,18 +152,21 @@ export function WaypointDrawer({
                     <input
                       type="checkbox"
                       checked={visited}
+                      disabled={viewOnlyCloud}
                       onChange={() => onToggleVisited(w.id)}
                       aria-label={`Mark ${w.name} as done`}
                     />
                   </label>
-                  <button
-                    type="button"
-                    className="waypoint-item__remove"
-                    onClick={() => onRemoveWaypoint(w.id)}
-                    aria-label={`Remove ${w.name}`}
-                  >
-                    Remove
-                  </button>
+                  {!viewOnlyCloud ? (
+                    <button
+                      type="button"
+                      className="waypoint-item__remove"
+                      onClick={() => onRemoveWaypoint(w.id)}
+                      aria-label={`Remove ${w.name}`}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
                 </li>
               )
             })}
@@ -119,20 +180,13 @@ export function WaypointDrawer({
           */}
 
           <section className="drawer-section">
-            <h3>Your position</h3>
+            <h3>{viewOnlyCloud ? 'Resenärernas position' : 'Your position'}</h3>
             <p className="waypoint-drawer__hint">
-              Uses the device GPS (HTTPS only in production). Red pin on the map.
+              {viewOnlyCloud
+                ? 'Röd pin = senast sparade position.'
+                : 'Uses the device GPS (HTTPS only in production). Red pin on the map.'}
             </p>
-            <div className="button-row">
-              {!geoActive ? (
-                <button type="button" className="button" onClick={onStartGeo}>
-                  Share location
-                </button>
-              ) : (
-                <button type="button" className="button button--secondary" onClick={onStopGeo}>
-                  Stop sharing
-                </button>
-              )}
+            {viewOnlyCloud ? (
               <button
                 type="button"
                 className="button button--secondary"
@@ -141,23 +195,47 @@ export function WaypointDrawer({
               >
                 Center map
               </button>
-            </div>
+            ) : (
+              <div className="button-row">
+                {!geoActive ? (
+                  <button type="button" className="button" onClick={onStartGeo}>
+                    Share location
+                  </button>
+                ) : (
+                  <button type="button" className="button button--secondary" onClick={onStopGeo}>
+                    Stop sharing
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={onCenterOnUser}
+                  disabled={!hasUserPosition}
+                >
+                  Center map
+                </button>
+              </div>
+            )}
             {geoError ? <p className="field-error">{geoError}</p> : null}
           </section>
 
-          <section className="drawer-section drawer-section--actions">
-            <button
-              type="button"
-              className="button button--danger"
-              onClick={() => {
-                if (window.confirm('Clear visited, custom stops, and removals on this device?')) {
-                  onClearDeviceData()
-                }
-              }}
-            >
-              Reset this device
-            </button>
-          </section>
+          {!viewOnlyCloud ? (
+            <section className="drawer-section drawer-section--actions">
+              <button
+                type="button"
+                className="button button--danger"
+                onClick={() => {
+                  if (
+                    window.confirm('Clear visited, custom stops, and removals on this device?')
+                  ) {
+                    onClearDeviceData()
+                  }
+                }}
+              >
+                Reset this device
+              </button>
+            </section>
+          ) : null}
         </div>
       </aside>
     </>

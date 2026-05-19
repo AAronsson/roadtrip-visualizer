@@ -34,3 +34,9 @@ export type PersistedTripState = {
   /** IDs from trip.json that the user removed on this device */
   removedDefaultIds: string[]
 }
+
+/** Shared trip progress in Azure blob (optional). */
+export type LiveTripState = PersistedTripState & {
+  updatedAt?: string
+  position?: { lat: number; lng: number; at: string }
+}

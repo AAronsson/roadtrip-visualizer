@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 .env
+azure/deploy-output.env
+azure/function.zip
+azure/.deploy-function
+azure/initial-live-state.json
 
 # Editor directories and files
 .vscode/*

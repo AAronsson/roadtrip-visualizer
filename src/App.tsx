@@ -10,6 +10,14 @@ import {
   loadPersistedState,
   savePersistedState,
 } from './lib/tripStorage'
+import {
+  canWriteCloud,
+  fetchLiveTripState,
+  isCloudSyncEnabled,
+  isViewOnlyCloud,
+  liveStateToPersisted,
+  saveLiveTripState,
+} from './lib/tripSync'
 import type { PersistedTripState, TripFile } from './types/trip'
 
 type View = 'map' | 'itinerary'
@@ -41,6 +49,11 @@ export default function App() {
   const watchIdRef = useRef<number | null>(null)
   const [recenterOnUserKey, setRecenterOnUserKey] = useState(0)
   const [view, setView] = useState<View>(viewFromHash)
+  const [cloudUpdatedAt, setCloudUpdatedAt] = useState<string | null>(null)
+  const [cloudMessage, setCloudMessage] = useState<string | null>(null)
+  const [cloudBusy, setCloudBusy] = useState(false)
+  const viewOnlyCloud = isViewOnlyCloud()
+  const writeCloud = canWriteCloud()
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash())
@@ -128,10 +141,57 @@ export default function App() {
     [tripFile],
   )
 
-  const updatePersisted = useCallback((next: PersistedTripState) => {
+  const applyLiveFromCloud = useCallback((live: Awaited<ReturnType<typeof fetchLiveTripState>>) => {
+    if (!live) return
+    const next = liveStateToPersisted(live)
     savePersistedState(next)
     setPersisted(next)
+    setCloudUpdatedAt(live.updatedAt ?? null)
+    if (live.position) {
+      setUserPosition({ lat: live.position.lat, lng: live.position.lng })
+    }
   }, [])
+
+  const refreshFromCloud = useCallback(async () => {
+    if (!isCloudSyncEnabled()) return
+    setCloudBusy(true)
+    setCloudMessage(null)
+    try {
+      const live = await fetchLiveTripState()
+      applyLiveFromCloud(live)
+      setCloudMessage('Hämtat.')
+    } catch (e) {
+      setCloudMessage(e instanceof Error ? e.message : 'Kunde inte hämta.')
+    } finally {
+      setCloudBusy(false)
+    }
+  }, [applyLiveFromCloud])
+
+  useEffect(() => {
+    if (!isCloudSyncEnabled()) return
+    void refreshFromCloud()
+  }, [refreshFromCloud])
+
+  const saveToCloud = useCallback(async () => {
+    if (!writeCloud) return
+    setCloudBusy(true)
+    setCloudMessage(null)
+    try {
+      await saveLiveTripState(persisted, userPosition)
+      setCloudMessage('Sparat för familjen.')
+      setCloudUpdatedAt(new Date().toISOString())
+    } catch (e) {
+      setCloudMessage(e instanceof Error ? e.message : 'Kunde inte spara.')
+    } finally {
+      setCloudBusy(false)
+    }
+  }, [persisted, userPosition, writeCloud])
+
+  const updatePersisted = useCallback((next: PersistedTripState) => {
+    if (viewOnlyCloud) return
+    savePersistedState(next)
+    setPersisted(next)
+  }, [viewOnlyCloud])
 
   const toggleVisited = useCallback(
     (id: string) => {
@@ -236,7 +296,7 @@ export default function App() {
       <ItineraryView
         waypoints={activeWaypoints}
         visitedWaypointIds={persisted.visitedWaypointIds}
-        onToggleVisited={toggleVisited}
+        onToggleVisited={viewOnlyCloud ? () => {} : toggleVisited}
         onBackToMap={() => {
           window.location.hash = ''
         }}
@@ -280,6 +340,14 @@ export default function App() {
         onStopGeo={stopGeo}
         onCenterOnUser={centerOnUser}
         hasUserPosition={userPosition != null}
+        cloudEnabled={isCloudSyncEnabled()}
+        viewOnlyCloud={viewOnlyCloud}
+        writeCloud={writeCloud}
+        cloudUpdatedAt={cloudUpdatedAt}
+        cloudMessage={cloudMessage}
+        cloudBusy={cloudBusy}
+        onRefreshFromCloud={refreshFromCloud}
+        onSaveToCloud={saveToCloud}
       />
     </div>
   )

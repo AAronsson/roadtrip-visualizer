@@ -1,0 +1,10 @@
+{
+  "name": "roadtrip-trip-sync",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/functions/*.js",
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "@azure/storage-blob": "^12.27.0"
+  }
+}

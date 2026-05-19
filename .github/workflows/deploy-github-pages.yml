@@ -38,6 +38,8 @@ jobs:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_MAPTILER_API_KEY: ${{ secrets.VITE_MAPTILER_API_KEY }}
           VITE_MAP_STYLE_URL: ${{ secrets.VITE_MAP_STYLE_URL }}
+          VITE_LIVE_STATE_URL: ${{ secrets.VITE_LIVE_STATE_URL }}
+          VITE_TRIP_SYNC_API_URL: ${{ secrets.VITE_TRIP_SYNC_API_URL }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
