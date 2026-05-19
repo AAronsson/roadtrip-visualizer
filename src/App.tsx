@@ -168,9 +168,9 @@ export default function App() {
   }, [applyLiveFromCloud])
 
   useEffect(() => {
-    if (!isCloudSyncEnabled()) return
+    if (!isCloudSyncEnabled() || !viewOnlyCloud) return
     void refreshFromCloud()
-  }, [refreshFromCloud])
+  }, [refreshFromCloud, viewOnlyCloud])
 
   const saveToCloud = useCallback(async () => {
     if (!writeCloud) return
@@ -294,7 +294,7 @@ export default function App() {
   if (view === 'itinerary') {
     return (
       <ItineraryView
-        waypoints={activeWaypoints}
+        waypoints={waypoints}
         visitedWaypointIds={persisted.visitedWaypointIds}
         onToggleVisited={viewOnlyCloud ? () => {} : toggleVisited}
         onBackToMap={() => {
@@ -308,7 +308,7 @@ export default function App() {
     <div className="app-shell">
       <TripMap
         basemap={basemap}
-        waypoints={activeWaypoints}
+        waypoints={waypoints}
         routeLineCoordinates={routeLineCoordinates}
         visitedWaypointIds={persisted.visitedWaypointIds}
         selectedWaypointId={selectedWaypointId}
@@ -328,10 +328,10 @@ export default function App() {
       <WaypointDrawer
         open={drawerOpen}
         onToggleOpen={() => setDrawerOpen((o) => !o)}
-        waypoints={activeWaypoints}
+        waypoints={waypoints}
         persisted={persisted}
         defaultWaypointIds={defaultWaypointIds}
-        onToggleVisited={toggleVisited}
+        onToggleVisited={viewOnlyCloud ? () => {} : toggleVisited}
         onRemoveWaypoint={removeWaypoint}
         onClearDeviceData={clearDeviceData}
         geoActive={geoActive}
