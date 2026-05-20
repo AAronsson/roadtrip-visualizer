@@ -77,7 +77,7 @@ export function WaypointDrawer({
         <div className="waypoint-drawer__inner">
           <h2 className="waypoint-drawer__title">Stops</h2>
           <a href="#/itinerary" className="button button--secondary waypoint-drawer__itinerary">
-            Itinerary →
+            Resplan →
           </a>
 
           {cloudEnabled && writeCloud ? (

@@ -34,6 +34,7 @@ type ItineraryViewProps = {
   visitedWaypointIds: string[]
   onToggleVisited: (id: string) => void
   onBackToMap: () => void
+  readOnly?: boolean
 }
 
 type DayGroup = {
@@ -126,6 +127,7 @@ export function ItineraryView({
   visitedWaypointIds,
   onToggleVisited,
   onBackToMap,
+  readOnly = false,
 }: ItineraryViewProps) {
   const days = useMemo(() => groupByDay(waypoints), [waypoints])
   const today = todayIsoDate()
@@ -173,13 +175,13 @@ export function ItineraryView({
           className="button button--secondary"
           onClick={onBackToMap}
         >
-          ← Back to map
+          ← Tillbaka till kartan
         </button>
-        <h1 className="itinerary__title">Itinerary</h1>
+        <h1 className="itinerary__title">Resplan</h1>
       </header>
 
       {days.length === 0 ? (
-        <p className="itinerary__empty">No dated stops yet.</p>
+        <p className="itinerary__empty">Inga planerade stopp ännu.</p>
       ) : (
         <ol className="itinerary__days">
           {days.map((day) => {
@@ -197,9 +199,6 @@ export function ItineraryView({
                 <div className="itinerary-day__head">
                   <span className="itinerary-day__weekday">{fmt.weekday}</span>
                   <span className="itinerary-day__date">{fmt.date}</span>
-                  {day.hasFixedDate ? (
-                    <span className="itinerary-day__badge">Fixed</span>
-                  ) : null}
                   {drive || wx ? (
                     <div className="itinerary-day__meta">
                       {drive ? (
@@ -238,36 +237,63 @@ export function ItineraryView({
                         key={w.id}
                         className={`itinerary-stop ${visited ? 'itinerary-stop--done' : ''} ${w.priority === 3 ? 'itinerary-stop--preliminary' : ''}`}
                       >
-                        <label className="itinerary-stop__label">
-                          <input
-                            type="checkbox"
-                            checked={visited}
-                            onChange={() => onToggleVisited(w.id)}
-                            aria-label={`Mark ${w.name} as done`}
-                          />
-                          {f ? (
-                            <img
-                              src={f}
-                              alt=""
-                              className="itinerary-stop__flag"
-                              width={20}
-                              height={15}
-                              loading="lazy"
+                        {readOnly ? (
+                          <div className="itinerary-stop__label">
+                            {f ? (
+                              <img
+                                src={f}
+                                alt=""
+                                className="itinerary-stop__flag"
+                                width={20}
+                                height={15}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="itinerary-stop__flag itinerary-stop__flag--empty" />
+                            )}
+                            <span className="itinerary-stop__name">{w.name}</span>
+                            {isSleep ? (
+                              <span
+                                className="itinerary-stop__role"
+                                aria-label="Övernattning"
+                                title="Övernattning"
+                              >
+                                ☾
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <label className="itinerary-stop__label">
+                            <input
+                              type="checkbox"
+                              checked={visited}
+                              onChange={() => onToggleVisited(w.id)}
+                              aria-label={`Markera ${w.name} som klar`}
                             />
-                          ) : (
-                            <span className="itinerary-stop__flag itinerary-stop__flag--empty" />
-                          )}
-                          <span className="itinerary-stop__name">{w.name}</span>
-                          {isSleep ? (
-                            <span
-                              className="itinerary-stop__role"
-                              aria-label="Sleep here"
-                              title="Sleep here"
-                            >
-                              ☾
-                            </span>
-                          ) : null}
-                        </label>
+                            {f ? (
+                              <img
+                                src={f}
+                                alt=""
+                                className="itinerary-stop__flag"
+                                width={20}
+                                height={15}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="itinerary-stop__flag itinerary-stop__flag--empty" />
+                            )}
+                            <span className="itinerary-stop__name">{w.name}</span>
+                            {isSleep ? (
+                              <span
+                                className="itinerary-stop__role"
+                                aria-label="Övernattning"
+                                title="Övernattning"
+                              >
+                                ☾
+                              </span>
+                            ) : null}
+                          </label>
+                        )}
                       </li>
                     )
                   })}

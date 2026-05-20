@@ -90,14 +90,22 @@ body {
   left: max(16px, env(safe-area-inset-left));
   z-index: 10;
   display: flex;
-  flex-direction: row;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
+
+.viewer-controls__link {
+  font-size: 0.8rem;
+  color: var(--text, #fff);
+  text-decoration: underline;
+  text-align: center;
+}
+
 
 .drawer-toggle {
   position: absolute;

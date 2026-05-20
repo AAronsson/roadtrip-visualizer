@@ -95,12 +95,6 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  // Public viewers cannot reach the itinerary page.
-  useEffect(() => {
-    if (viewOnlyCloud && view === 'itinerary') {
-      window.location.hash = ''
-    }
-  }, [viewOnlyCloud, view])
 
   useEffect(() => {
     void fetch(`${import.meta.env.BASE_URL}trip.json`)
@@ -477,7 +471,7 @@ export default function App() {
     )
   }
 
-  if (view === 'itinerary' && !viewOnlyCloud) {
+  if (view === 'itinerary') {
     return (
       <ItineraryView
         waypoints={waypoints}
@@ -486,6 +480,7 @@ export default function App() {
         onBackToMap={() => {
           window.location.hash = ''
         }}
+        readOnly={viewOnlyCloud}
       />
     )
   }
@@ -513,9 +508,7 @@ export default function App() {
 
       {viewOnlyCloud ? (
         <ViewerControls
-          cloudBusy={cloudBusy}
           hasUserPosition={userPosition != null}
-          onRefreshFromCloud={refreshFromCloud}
           onCenterOnUser={centerOnUser}
         />
       ) : (
