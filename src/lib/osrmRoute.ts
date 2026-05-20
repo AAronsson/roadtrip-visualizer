@@ -101,3 +101,39 @@ export async function fetchRoadRouteCoordinates(
 
   return fetchSegmentBySegment(waypoints)
 }
+
+/**
+ * Splits a single polyline into per-leg slices by finding the closest polyline
+ * coordinate to each waypoint and slicing between those indices. Search walks
+ * forward so duplicate-coordinate waypoints (e.g. malmo / malmo-return) match
+ * the right occurrence along the route.
+ */
+export function splitPolylineByWaypoints(
+  coords: [number, number][],
+  waypoints: Waypoint[],
+): [number, number][][] {
+  if (coords.length < 2 || waypoints.length < 2) return []
+  const indices: number[] = []
+  let searchStart = 0
+  for (const wp of waypoints) {
+    let bestIdx = searchStart
+    let bestDist = Infinity
+    for (let i = searchStart; i < coords.length; i++) {
+      const dx = coords[i][0] - wp.lng
+      const dy = coords[i][1] - wp.lat
+      const d = dx * dx + dy * dy
+      if (d < bestDist) {
+        bestDist = d
+        bestIdx = i
+      }
+    }
+    indices.push(bestIdx)
+    searchStart = bestIdx
+  }
+  const legs: [number, number][][] = []
+  for (let i = 0; i < indices.length - 1; i++) {
+    const slice = coords.slice(indices[i], indices[i + 1] + 1)
+    if (slice.length >= 2) legs.push(slice)
+  }
+  return legs
+}

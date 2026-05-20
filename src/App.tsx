@@ -3,8 +3,15 @@ import { TripMap } from './components/TripMap'
 import { ViewerControls } from './components/ViewerControls'
 import { WaypointDrawer } from './components/WaypointDrawer'
 import { ItineraryView } from './components/ItineraryView'
-import { mergeTripWaypoints, waypointsHidingVisited } from './lib/tripMerge'
-import { fetchRoadRouteCoordinates } from './lib/osrmRoute'
+import {
+  mergePersistedStates,
+  mergeTripWaypoints,
+  waypointsForPublicView,
+} from './lib/tripMerge'
+import {
+  fetchRoadRouteCoordinates,
+  splitPolylineByWaypoints,
+} from './lib/osrmRoute'
 import { resolveBasemap } from './lib/mapStyle'
 import {
   clearPersistedState,
@@ -19,9 +26,18 @@ import {
   liveStateToPersisted,
   saveLiveTripState,
 } from './lib/tripSync'
-import type { PersistedTripState, TripFile } from './types/trip'
+import type {
+  LiveTripState,
+  PersistedTripState,
+  RouteSegment,
+  TripFile,
+} from './types/trip'
 
 type View = 'map' | 'itinerary'
+
+const PUBLIC_REFRESH_MS = 15 * 60 * 1000
+const STATE_SAVE_DEBOUNCE_MS = 1500
+const POSITION_SAVE_INTERVAL_MS = 2 * 60 * 1000
 
 function viewFromHash(): View {
   return window.location.hash.startsWith('#/itinerary') ? 'itinerary' : 'map'
@@ -51,16 +67,41 @@ export default function App() {
   const [recenterOnUserKey, setRecenterOnUserKey] = useState(0)
   const [view, setView] = useState<View>(viewFromHash)
   const [cloudUpdatedAt, setCloudUpdatedAt] = useState<string | null>(null)
+  const [cloudPositionAt, setCloudPositionAt] = useState<string | null>(null)
   const [cloudMessage, setCloudMessage] = useState<string | null>(null)
   const [cloudBusy, setCloudBusy] = useState(false)
+  const [initialFetchDone, setInitialFetchDone] = useState(
+    () => !isCloudSyncEnabled(),
+  )
+
   const viewOnlyCloud = isViewOnlyCloud()
   const writeCloud = canWriteCloud()
+
+  // baseline = last known server state, used for 3-way merge on autosave.
+  const baselineRef = useRef<PersistedTripState>(emptyPersisted())
+  const lastLivePositionRef = useRef<LiveTripState['position'] | null>(null)
+  const persistedRef = useRef(persisted)
+  const userPositionRef = useRef(userPosition)
+
+  useEffect(() => {
+    persistedRef.current = persisted
+  }, [persisted])
+  useEffect(() => {
+    userPositionRef.current = userPosition
+  }, [userPosition])
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash())
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  // Public viewers cannot reach the itinerary page.
+  useEffect(() => {
+    if (viewOnlyCloud && view === 'itinerary') {
+      window.location.hash = ''
+    }
+  }, [viewOnlyCloud, view])
 
   useEffect(() => {
     void fetch(`${import.meta.env.BASE_URL}trip.json`)
@@ -83,116 +124,239 @@ export default function App() {
     return mergeTripWaypoints(tripFile, persisted)
   }, [tripFile, persisted])
 
-  const activeWaypoints = useMemo(
-    () => waypointsHidingVisited(waypoints, persisted.visitedWaypointIds),
-    [waypoints, persisted.visitedWaypointIds],
+  // Route polyline uses the full planned route (preliminary stops included).
+  const routeWaypoints = waypoints
+
+  // Public viewers don't see preliminary unvisited pins; keyed users see all.
+  const displayWaypoints = useMemo(
+    () =>
+      viewOnlyCloud
+        ? waypointsForPublicView(waypoints, persisted.visitedWaypointIds)
+        : waypoints,
+    [waypoints, viewOnlyCloud, persisted.visitedWaypointIds],
   )
 
   useEffect(() => {
     if (
       selectedWaypointId &&
-      !activeWaypoints.some((w) => w.id === selectedWaypointId)
+      !displayWaypoints.some((w) => w.id === selectedWaypointId)
     ) {
       setSelectedWaypointId(null)
     }
-  }, [activeWaypoints, selectedWaypointId])
+  }, [displayWaypoints, selectedWaypointId])
 
   const waypointSig = useMemo(
-    () => activeWaypoints.map((w) => `${w.id}:${w.lat},${w.lng}`).join('|'),
-    [activeWaypoints],
-  )
-
-  const straightRouteCoords = useMemo(
-    () =>
-      activeWaypoints.length < 2
-        ? []
-        : activeWaypoints.map((w) => [w.lng, w.lat] as [number, number]),
-    [activeWaypoints],
+    () => routeWaypoints.map((w) => `${w.id}:${w.lat},${w.lng}`).join('|'),
+    [routeWaypoints],
   )
 
   const [osrmRouteMatch, setOsrmRouteMatch] = useState<{
     sig: string
-    coords: [number, number][]
+    legs: [number, number][][]
   } | null>(null)
 
   useEffect(() => {
-    if (activeWaypoints.length < 2) return
+    if (routeWaypoints.length < 2) return
     const sigAtStart = waypointSig
     let cancelled = false
-    void fetchRoadRouteCoordinates(activeWaypoints).then((coords) => {
+    void fetchRoadRouteCoordinates(routeWaypoints).then((coords) => {
       if (cancelled) return
-      if (coords.length >= 2) {
-        setOsrmRouteMatch({ sig: sigAtStart, coords })
+      if (coords.length < 2) return
+      const legs = splitPolylineByWaypoints(coords, routeWaypoints)
+      if (legs.length >= 1) {
+        setOsrmRouteMatch({ sig: sigAtStart, legs })
       }
     })
     return () => {
       cancelled = true
     }
-  }, [activeWaypoints, waypointSig])
+  }, [routeWaypoints, waypointSig])
 
-  const routeLineCoordinates =
-    activeWaypoints.length < 2
-      ? []
-      : osrmRouteMatch?.sig === waypointSig && osrmRouteMatch.coords.length >= 2
-        ? osrmRouteMatch.coords
-        : straightRouteCoords
+  const routeSegments = useMemo<RouteSegment[]>(() => {
+    if (routeWaypoints.length < 2) return []
+    const visited = new Set(persisted.visitedWaypointIds)
+    const legs =
+      osrmRouteMatch?.sig === waypointSig && osrmRouteMatch.legs.length >= 1
+        ? osrmRouteMatch.legs
+        : routeWaypoints.slice(0, -1).map((w, i) => {
+            const next = routeWaypoints[i + 1]
+            return [
+              [w.lng, w.lat] as [number, number],
+              [next.lng, next.lat] as [number, number],
+            ]
+          })
+    return legs.map((coords, i) => ({
+      coords,
+      visited:
+        visited.has(routeWaypoints[i]?.id ?? '') &&
+        visited.has(routeWaypoints[i + 1]?.id ?? ''),
+    }))
+  }, [
+    routeWaypoints,
+    waypointSig,
+    osrmRouteMatch,
+    persisted.visitedWaypointIds,
+  ])
 
   const defaultWaypointIds = useMemo(
     () => new Set((tripFile?.waypoints ?? []).map((w) => w.id)),
     [tripFile],
   )
 
-  const applyLiveFromCloud = useCallback((live: Awaited<ReturnType<typeof fetchLiveTripState>>) => {
+  const applyServerSnapshot = useCallback((live: LiveTripState | null) => {
     if (!live) return
     const next = liveStateToPersisted(live)
+    baselineRef.current = next
+    lastLivePositionRef.current = live.position ?? null
     savePersistedState(next)
     setPersisted(next)
     setCloudUpdatedAt(live.updatedAt ?? null)
     if (live.position) {
       setUserPosition({ lat: live.position.lat, lng: live.position.lng })
+      setCloudPositionAt(live.position.at || null)
+    } else {
+      setCloudPositionAt(null)
     }
   }, [])
 
   const refreshFromCloud = useCallback(async () => {
     if (!isCloudSyncEnabled()) return
     setCloudBusy(true)
-    setCloudMessage(null)
     try {
       const live = await fetchLiveTripState()
-      applyLiveFromCloud(live)
+      applyServerSnapshot(live)
       setCloudMessage('Hämtat.')
     } catch (e) {
       setCloudMessage(e instanceof Error ? e.message : 'Kunde inte hämta.')
     } finally {
       setCloudBusy(false)
     }
-  }, [applyLiveFromCloud])
+  }, [applyServerSnapshot])
 
+  // Initial fetch (both modes) so keyed devices start from the server snapshot.
   useEffect(() => {
-    if (!isCloudSyncEnabled() || !viewOnlyCloud) return
-    void refreshFromCloud()
-  }, [refreshFromCloud, viewOnlyCloud])
+    if (!isCloudSyncEnabled()) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const live = await fetchLiveTripState()
+        if (cancelled) return
+        applyServerSnapshot(live)
+      } catch (e) {
+        if (cancelled) return
+        setCloudMessage(e instanceof Error ? e.message : 'Kunde inte hämta.')
+      } finally {
+        if (!cancelled) setInitialFetchDone(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [applyServerSnapshot])
 
-  const saveToCloud = useCallback(async () => {
+  // Public viewers auto-refresh every 15 minutes.
+  useEffect(() => {
+    if (!viewOnlyCloud) return
+    const id = window.setInterval(() => {
+      void refreshFromCloud()
+    }, PUBLIC_REFRESH_MS)
+    return () => window.clearInterval(id)
+  }, [viewOnlyCloud, refreshFromCloud])
+
+  const performSave = useCallback(async (): Promise<void> => {
     if (!writeCloud) return
-    setCloudBusy(true)
-    setCloudMessage(null)
     try {
-      await saveLiveTripState(persisted, userPosition)
-      setCloudMessage('Sparat för familjen.')
+      setCloudBusy(true)
+      const live = await fetchLiveTripState()
+      const serverState = live ? liveStateToPersisted(live) : emptyPersisted()
+      const merged = mergePersistedStates(
+        serverState,
+        baselineRef.current,
+        persistedRef.current,
+      )
+
+      // Preserve the most recent known position. If we are not actively sharing
+      // GPS, send the server's last position back so the blob keeps it.
+      const local = userPositionRef.current
+      let position: { lat: number; lng: number; at?: string } | null = null
+      let savedPositionAt: string | null = null
+      if (local) {
+        const at = new Date().toISOString()
+        position = { lat: local.lat, lng: local.lng, at }
+        savedPositionAt = at
+      } else if (live?.position) {
+        position = {
+          lat: live.position.lat,
+          lng: live.position.lng,
+          at: live.position.at || undefined,
+        }
+        savedPositionAt = live.position.at || null
+      }
+
+      await saveLiveTripState(merged, position)
+      baselineRef.current = merged
+      lastLivePositionRef.current = position
+        ? {
+            lat: position.lat,
+            lng: position.lng,
+            at: position.at ?? new Date().toISOString(),
+          }
+        : null
+      savePersistedState(merged)
+      setPersisted(merged)
       setCloudUpdatedAt(new Date().toISOString())
+      setCloudPositionAt(savedPositionAt)
+      setCloudMessage('Sparat.')
     } catch (e) {
       setCloudMessage(e instanceof Error ? e.message : 'Kunde inte spara.')
     } finally {
       setCloudBusy(false)
     }
-  }, [persisted, userPosition, writeCloud])
+  }, [writeCloud])
 
-  const updatePersisted = useCallback((next: PersistedTripState) => {
-    if (viewOnlyCloud) return
-    savePersistedState(next)
-    setPersisted(next)
-  }, [viewOnlyCloud])
+  const saveTimerRef = useRef<number | null>(null)
+  const scheduleSave = useCallback(
+    (delayMs: number = STATE_SAVE_DEBOUNCE_MS) => {
+      if (!writeCloud) return
+      if (saveTimerRef.current != null) {
+        window.clearTimeout(saveTimerRef.current)
+      }
+      saveTimerRef.current = window.setTimeout(() => {
+        saveTimerRef.current = null
+        void performSave()
+      }, delayMs)
+    },
+    [writeCloud, performSave],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current != null) {
+        window.clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+    }
+  }, [])
+
+  // Throttled position autosave while live GPS is on.
+  useEffect(() => {
+    if (!writeCloud || !geoActive) return
+    const id = window.setInterval(() => {
+      if (!userPositionRef.current) return
+      scheduleSave(0)
+    }, POSITION_SAVE_INTERVAL_MS)
+    return () => window.clearInterval(id)
+  }, [writeCloud, geoActive, scheduleSave])
+
+  const updatePersisted = useCallback(
+    (next: PersistedTripState) => {
+      if (viewOnlyCloud) return
+      savePersistedState(next)
+      setPersisted(next)
+      scheduleSave()
+    },
+    [viewOnlyCloud, scheduleSave],
+  )
 
   const toggleVisited = useCallback(
     (id: string) => {
@@ -226,9 +390,15 @@ export default function App() {
     [persisted, updatePersisted],
   )
 
-  const clearDeviceData = useCallback(() => {
+  const resetTrip = useCallback(async () => {
+    if (saveTimerRef.current != null) {
+      window.clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    const empty = emptyPersisted()
     clearPersistedState()
-    setPersisted(emptyPersisted())
+    setPersisted(empty)
+    baselineRef.current = empty
     setSelectedWaypointId(null)
     setUserPosition(null)
     if (watchIdRef.current != null) {
@@ -237,7 +407,20 @@ export default function App() {
     }
     setGeoActive(false)
     setGeoError(null)
-  }, [])
+
+    if (!writeCloud) return
+    try {
+      setCloudBusy(true)
+      await saveLiveTripState(empty, null)
+      setCloudUpdatedAt(new Date().toISOString())
+      setCloudPositionAt(null)
+      setCloudMessage('Resan återställd.')
+    } catch (e) {
+      setCloudMessage(e instanceof Error ? e.message : 'Kunde inte återställa.')
+    } finally {
+      setCloudBusy(false)
+    }
+  }, [writeCloud])
 
   const stopGeo = useCallback(() => {
     if (watchIdRef.current != null) {
@@ -245,7 +428,8 @@ export default function App() {
       watchIdRef.current = null
     }
     setGeoActive(false)
-    setUserPosition(null)
+    // Keep userPosition so the last known dot stays on the map for the
+    // keyed user, and so autosave can preserve it from the server.
   }, [])
 
   const startGeo = useCallback(() => {
@@ -271,6 +455,17 @@ export default function App() {
     )
   }, [stopGeo])
 
+  // Save once shortly after GPS starts producing positions, so the family
+  // sees the new spot quickly instead of waiting for the throttled interval.
+  const lastSharedPositionSaveRef = useRef<number>(0)
+  useEffect(() => {
+    if (!writeCloud || !geoActive || !userPosition) return
+    const now = Date.now()
+    if (now - lastSharedPositionSaveRef.current < 30_000) return
+    lastSharedPositionSaveRef.current = now
+    scheduleSave(2000)
+  }, [writeCloud, geoActive, userPosition, scheduleSave])
+
   useEffect(() => {
     return () => {
       if (watchIdRef.current != null) {
@@ -284,7 +479,7 @@ export default function App() {
     setRecenterOnUserKey((k) => k + 1)
   }, [])
 
-  if (!tripFile) {
+  if (!tripFile || !initialFetchDone) {
     return (
       <div className="app-loading">
         <p>Loading trip…</p>
@@ -292,12 +487,12 @@ export default function App() {
     )
   }
 
-  if (view === 'itinerary') {
+  if (view === 'itinerary' && !viewOnlyCloud) {
     return (
       <ItineraryView
         waypoints={waypoints}
         visitedWaypointIds={persisted.visitedWaypointIds}
-        onToggleVisited={viewOnlyCloud ? () => {} : toggleVisited}
+        onToggleVisited={toggleVisited}
         onBackToMap={() => {
           window.location.hash = ''
         }}
@@ -309,8 +504,8 @@ export default function App() {
     <div className="app-shell">
       <TripMap
         basemap={basemap}
-        waypoints={waypoints}
-        routeLineCoordinates={routeLineCoordinates}
+        waypoints={displayWaypoints}
+        routeSegments={routeSegments}
         visitedWaypointIds={persisted.visitedWaypointIds}
         selectedWaypointId={selectedWaypointId}
         onSelectWaypoint={setSelectedWaypointId}
@@ -329,6 +524,7 @@ export default function App() {
       {viewOnlyCloud ? (
         <ViewerControls
           cloudUpdatedAt={cloudUpdatedAt}
+          cloudPositionAt={cloudPositionAt}
           cloudMessage={cloudMessage}
           cloudBusy={cloudBusy}
           hasUserPosition={userPosition != null}
@@ -344,7 +540,7 @@ export default function App() {
           defaultWaypointIds={defaultWaypointIds}
           onToggleVisited={toggleVisited}
           onRemoveWaypoint={removeWaypoint}
-          onClearDeviceData={clearDeviceData}
+          onResetTrip={resetTrip}
           geoActive={geoActive}
           geoError={geoError}
           onStartGeo={startGeo}
@@ -352,13 +548,10 @@ export default function App() {
           onCenterOnUser={centerOnUser}
           hasUserPosition={userPosition != null}
           cloudEnabled={isCloudSyncEnabled()}
-          viewOnlyCloud={false}
           writeCloud={writeCloud}
           cloudUpdatedAt={cloudUpdatedAt}
           cloudMessage={cloudMessage}
           cloudBusy={cloudBusy}
-          onRefreshFromCloud={refreshFromCloud}
-          onSaveToCloud={saveToCloud}
         />
       )}
     </div>

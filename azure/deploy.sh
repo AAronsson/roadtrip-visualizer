@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AZURE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 RG="${ROADTRIP_AZURE_RG:-rg-roadtrip-map-live}"
-LOCATION="${ROADTRIP_AZURE_LOCATION:-swedencentral}"
+LOCATION="${ROADTRIP_AZURE_LOCATION:-northeurope}"
 WRITE_KEY="${ROADTRIP_WRITE_KEY:-$(openssl rand -hex 24)}"
 
 echo "==> Resource group: $RG ($LOCATION)"
@@ -41,11 +41,12 @@ cp -R "$FUNC_DIR/src" "$BUILD_DIR/"
   zip -qr "$AZURE_DIR/function.zip" .
 )
 
-echo "==> Publishing function code…"
-az functionapp deployment source config-zip \
+echo "==> Publishing function code (Flex Consumption OneDeploy)…"
+az functionapp deploy \
   --resource-group "$RG" \
   --name "$FUNC_NAME" \
-  --src "$AZURE_DIR/function.zip" \
+  --src-path "$AZURE_DIR/function.zip" \
+  --type zip \
   --output none
 
 echo "==> Seeding live-state.json…"

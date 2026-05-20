@@ -10,6 +10,10 @@ param writeKey string
 var suffix = uniqueString(resourceGroup().id)
 var storageAccountName = 'rtmap${suffix}'
 var functionAppName = 'rtmap-sync-${suffix}'
+var hostingPlanName = 'rtmap-plan-${suffix}'
+var deploymentContainerName = 'deployment'
+var liveStateContainerName = 'trip'
+var liveStateBlobName = 'live-state.json'
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
@@ -28,23 +32,45 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: storageAccount
   name: 'default'
+  properties: {
+    cors: {
+      corsRules: [
+        {
+          allowedOrigins: [ '*' ]
+          allowedMethods: [ 'GET', 'HEAD', 'OPTIONS' ]
+          allowedHeaders: [ '*' ]
+          exposedHeaders: [ '*' ]
+          maxAgeInSeconds: 3600
+        }
+      ]
+    }
+  }
 }
 
 resource tripContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
-  name: 'trip'
+  name: liveStateContainerName
   properties: {
     publicAccess: 'Blob'
   }
 }
 
+resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: deploymentContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 resource hostingPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name: 'rtmap-plan-${suffix}'
+  name: hostingPlanName
   location: location
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+    name: 'FC1'
+    tier: 'FlexConsumption'
   }
+  kind: 'functionapp,linux'
   properties: {
     reserved: true
   }
@@ -60,33 +86,15 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     serverFarmId: hostingPlan.id
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'NODE|24'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: [ '*' ]
+      }
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
           value: storageConnectionString
-        }
-        {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storageConnectionString
-        }
-        {
-          name: 'WEBSITE_CONTENTSHARE'
-          value: toLower(functionAppName)
-        }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'node'
-        }
-        {
-          name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~24'
         }
         {
           name: 'WRITE_KEY'
@@ -94,18 +102,42 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'LIVE_STATE_CONTAINER'
-          value: 'trip'
+          value: liveStateContainerName
         }
         {
           name: 'LIVE_STATE_BLOB'
-          value: 'live-state.json'
+          value: liveStateBlobName
         }
       ]
     }
+    functionAppConfig: {
+      deployment: {
+        storage: {
+          type: 'blobContainer'
+          value: '${storageAccount.properties.primaryEndpoints.blob}${deploymentContainerName}'
+          authentication: {
+            type: 'StorageAccountConnectionString'
+            storageAccountConnectionStringName: 'AzureWebJobsStorage'
+          }
+        }
+      }
+      scaleAndConcurrency: {
+        maximumInstanceCount: 40
+        instanceMemoryMB: 2048
+      }
+      runtime: {
+        name: 'node'
+        version: '24'
+      }
+    }
   }
+  dependsOn: [
+    deploymentContainer
+    tripContainer
+  ]
 }
 
 output storageAccountName string = storageAccount.name
-output liveStateUrl string = 'https://${storageAccount.name}.blob.${environment().suffixes.storage}/trip/live-state.json'
+output liveStateUrl string = 'https://${storageAccount.name}.blob.${environment().suffixes.storage}/${liveStateContainerName}/${liveStateBlobName}'
 output functionAppName string = functionApp.name
 output tripSyncApiUrl string = 'https://${functionApp.properties.defaultHostName}/api/trip-state'

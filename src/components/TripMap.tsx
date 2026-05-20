@@ -5,7 +5,7 @@ import { annotateCountryFills } from '../lib/countryFill'
 import { fetchStyleJsonWithMercator } from '../lib/ensureStyleMercator'
 import type { BasemapInfo } from '../lib/mapStyle'
 import type { FeatureCollection } from 'geojson'
-import type { Waypoint } from '../types/trip'
+import type { RouteSegment, Waypoint } from '../types/trip'
 
 const EUROPE_BOUNDS: maplibregl.LngLatBoundsLike = [
   [-32, 35],
@@ -17,40 +17,45 @@ function buildWaypointsGeoJSON(
   visitedIds: Set<string>,
   selectedId: string | null,
 ) {
-  return {
-    type: 'FeatureCollection' as const,
-    features: waypoints.map((w) => ({
-      type: 'Feature' as const,
-      properties: {
-        id: w.id,
-        name: w.name,
-        shortName: w.name.length > 16 ? `${w.name.slice(0, 14)}…` : w.name,
-        visited: visitedIds.has(w.id),
-        selected: w.id === selectedId,
-        preliminary: w.priority === 3,
-      },
-      geometry: { type: 'Point' as const, coordinates: [w.lng, w.lat] },
-    })),
-  }
+  const features = waypoints.map((w) => ({
+    type: 'Feature' as const,
+    properties: {
+      id: w.id,
+      name: w.name,
+      shortName: w.name.length > 16 ? `${w.name.slice(0, 14)}…` : w.name,
+      visited: visitedIds.has(w.id),
+      selected: w.id === selectedId,
+      preliminary: w.priority === 3,
+    },
+    geometry: { type: 'Point' as const, coordinates: [w.lng, w.lat] },
+  }))
+
+  // Draw order is source order: last drawn = on top. Put preliminary at the
+  // bottom, visited above normal, and the selected stop above everything so
+  // duplicate-coordinate stops (e.g. malmo / malmo-return) reveal the green
+  // pin when one of them is visited.
+  const score = (p: (typeof features)[number]['properties']) =>
+    p.selected ? 3 : p.visited ? 2 : p.preliminary ? 0 : 1
+  features.sort((a, b) => score(a.properties) - score(b.properties))
+
+  return { type: 'FeatureCollection' as const, features }
 }
 
-function buildRouteGeoJSON(coords: [number, number][]) {
-  if (coords.length < 2) {
-    return { type: 'FeatureCollection' as const, features: [] }
-  }
-  return {
-    type: 'FeatureCollection' as const,
-    features: [
-      {
-        type: 'Feature' as const,
-        properties: {},
-        geometry: {
-          type: 'LineString' as const,
-          coordinates: coords,
-        },
+function buildRouteGeoJSON(segments: RouteSegment[]) {
+  const features = segments
+    .filter((s) => s.coords.length >= 2)
+    .map((s) => ({
+      type: 'Feature' as const,
+      properties: { visited: s.visited },
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: s.coords,
       },
-    ],
-  }
+    }))
+  // Draw visited (green) segments on top so they're not hidden by overlapping
+  // unvisited legs (e.g. shared road between malmo and malmo-return).
+  features.sort((a, b) => Number(a.properties.visited) - Number(b.properties.visited))
+  return { type: 'FeatureCollection' as const, features }
 }
 
 function applyTerrainIfPresent(map: maplibregl.Map) {
@@ -69,8 +74,8 @@ function applyTerrainIfPresent(map: maplibregl.Map) {
 type TripMapProps = {
   basemap: BasemapInfo
   waypoints: Waypoint[]
-  /** Polyline in map order [lng, lat]; from OSRM or straight fallback. */
-  routeLineCoordinates: [number, number][]
+  /** Per-leg route polylines from OSRM (or straight fallback), with visited flag. */
+  routeSegments: RouteSegment[]
   visitedWaypointIds: string[]
   selectedWaypointId: string | null
   onSelectWaypoint: (id: string | null) => void
@@ -82,7 +87,7 @@ type TripMapProps = {
 export function TripMap({
   basemap,
   waypoints,
-  routeLineCoordinates,
+  routeSegments,
   visitedWaypointIds,
   selectedWaypointId,
   onSelectWaypoint,
@@ -97,7 +102,7 @@ export function TripMap({
   const visitedRef = useRef(visitedWaypointIds)
   const selectedRef = useRef(selectedWaypointId)
   const userPositionRef = useRef(userPosition)
-  const routeCoordsRef = useRef(routeLineCoordinates)
+  const routeSegmentsRef = useRef(routeSegments)
 
   useEffect(() => {
     onSelectRef.current = onSelectWaypoint
@@ -107,8 +112,8 @@ export function TripMap({
     waypointsRef.current = waypoints
     visitedRef.current = visitedWaypointIds
     selectedRef.current = selectedWaypointId
-    routeCoordsRef.current = routeLineCoordinates
-  }, [waypoints, visitedWaypointIds, selectedWaypointId, routeLineCoordinates])
+    routeSegmentsRef.current = routeSegments
+  }, [waypoints, visitedWaypointIds, selectedWaypointId, routeSegments])
 
   useEffect(() => {
     userPositionRef.current = userPosition
@@ -131,7 +136,7 @@ export function TripMap({
         selectedRef.current,
       ),
     )
-    routeSource.setData(buildRouteGeoJSON(routeCoordsRef.current))
+    routeSource.setData(buildRouteGeoJSON(routeSegmentsRef.current))
   }
 
   useEffect(() => {
@@ -222,7 +227,7 @@ export function TripMap({
 
       mapInstance.addSource('trip-route', {
         type: 'geojson',
-        data: buildRouteGeoJSON(routeCoordsRef.current),
+        data: buildRouteGeoJSON(routeSegmentsRef.current),
       })
       mapInstance.addSource('trip-waypoints', {
         type: 'geojson',
@@ -239,7 +244,12 @@ export function TripMap({
         source: 'trip-route',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': '#b45309',
+          'line-color': [
+            'case',
+            ['get', 'visited'],
+            '#15803d',
+            '#b45309',
+          ],
           'line-width': 4,
           'line-opacity': 0.88,
         },
@@ -342,7 +352,7 @@ export function TripMap({
 
   useEffect(() => {
     syncTripData()
-  }, [waypoints, visitedWaypointIds, selectedWaypointId, routeLineCoordinates])
+  }, [waypoints, visitedWaypointIds, selectedWaypointId, routeSegments])
 
   useEffect(() => {
     const map = mapRef.current

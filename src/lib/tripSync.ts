@@ -30,7 +30,7 @@ export async function fetchLiveTripState(): Promise<LiveTripState | null> {
 
 export async function saveLiveTripState(
   persisted: PersistedTripState,
-  position: { lat: number; lng: number } | null,
+  position: { lat: number; lng: number; at?: string } | null,
 ): Promise<void> {
   const writeKey = getWriteKeyFromUrl()
   if (!syncApiUrl || !writeKey) {
@@ -43,7 +43,11 @@ export async function saveLiveTripState(
     removedDefaultIds: persisted.removedDefaultIds,
   }
   if (position) {
-    body.position = { ...position, at: new Date().toISOString() }
+    body.position = {
+      lat: position.lat,
+      lng: position.lng,
+      at: position.at ?? new Date().toISOString(),
+    }
   }
 
   const res = await fetch(syncApiUrl, {

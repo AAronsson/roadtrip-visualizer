@@ -40,3 +40,9 @@ export type LiveTripState = PersistedTripState & {
   updatedAt?: string
   position?: { lat: number; lng: number; at: string }
 }
+
+/** One leg of the route polyline, with a flag for "both endpoints visited". */
+export type RouteSegment = {
+  coords: [number, number][]
+  visited: boolean
+}

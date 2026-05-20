@@ -1,5 +1,6 @@
 type ViewerControlsProps = {
   cloudUpdatedAt: string | null
+  cloudPositionAt: string | null
   cloudMessage: string | null
   cloudBusy: boolean
   hasUserPosition: boolean
@@ -7,29 +8,38 @@ type ViewerControlsProps = {
   onCenterOnUser: () => void
 }
 
+function formatTime(iso: string | null): string | null {
+  if (!iso) return null
+  try {
+    return new Date(iso).toLocaleString()
+  } catch {
+    return iso
+  }
+}
+
 export function ViewerControls({
   cloudUpdatedAt,
+  cloudPositionAt,
   cloudMessage,
   cloudBusy,
   hasUserPosition,
   onRefreshFromCloud,
   onCenterOnUser,
 }: ViewerControlsProps) {
-  const cloudTime =
-    cloudUpdatedAt &&
-    (() => {
-      try {
-        return new Date(cloudUpdatedAt).toLocaleString()
-      } catch {
-        return cloudUpdatedAt
-      }
-    })()
+  const updatedTime = formatTime(cloudUpdatedAt)
+  const positionTime = formatTime(cloudPositionAt)
 
   return (
     <div className="viewer-controls" aria-label="Följ resan">
-      {cloudTime ? (
-        <p className="viewer-controls__meta">Uppdaterad: {cloudTime}</p>
+      {updatedTime ? (
+        <p className="viewer-controls__meta">Uppdaterad: {updatedTime}</p>
       ) : null}
+      {positionTime ? (
+        <p className="viewer-controls__meta">Position sedd: {positionTime}</p>
+      ) : null}
+      <p className="viewer-controls__meta viewer-controls__meta--faint">
+        Laddar om automatiskt var 15:e minut.
+      </p>
       <div className="viewer-controls__buttons">
         <button
           type="button"
@@ -37,7 +47,7 @@ export function ViewerControls({
           disabled={cloudBusy}
           onClick={onRefreshFromCloud}
         >
-          Hämta senaste
+          {cloudBusy ? 'Hämtar…' : 'Hämta senaste'}
         </button>
         <button
           type="button"
