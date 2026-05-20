@@ -67,7 +67,6 @@ export default function App() {
   const [recenterOnUserKey, setRecenterOnUserKey] = useState(0)
   const [view, setView] = useState<View>(viewFromHash)
   const [cloudUpdatedAt, setCloudUpdatedAt] = useState<string | null>(null)
-  const [cloudPositionAt, setCloudPositionAt] = useState<string | null>(null)
   const [cloudMessage, setCloudMessage] = useState<string | null>(null)
   const [cloudBusy, setCloudBusy] = useState(false)
   const [initialFetchDone, setInitialFetchDone] = useState(
@@ -213,9 +212,6 @@ export default function App() {
     setCloudUpdatedAt(live.updatedAt ?? null)
     if (live.position) {
       setUserPosition({ lat: live.position.lat, lng: live.position.lng })
-      setCloudPositionAt(live.position.at || null)
-    } else {
-      setCloudPositionAt(null)
     }
   }, [])
 
@@ -279,18 +275,14 @@ export default function App() {
       // GPS, send the server's last position back so the blob keeps it.
       const local = userPositionRef.current
       let position: { lat: number; lng: number; at?: string } | null = null
-      let savedPositionAt: string | null = null
       if (local) {
-        const at = new Date().toISOString()
-        position = { lat: local.lat, lng: local.lng, at }
-        savedPositionAt = at
+        position = { lat: local.lat, lng: local.lng, at: new Date().toISOString() }
       } else if (live?.position) {
         position = {
           lat: live.position.lat,
           lng: live.position.lng,
           at: live.position.at || undefined,
         }
-        savedPositionAt = live.position.at || null
       }
 
       await saveLiveTripState(merged, position)
@@ -305,7 +297,6 @@ export default function App() {
       savePersistedState(merged)
       setPersisted(merged)
       setCloudUpdatedAt(new Date().toISOString())
-      setCloudPositionAt(savedPositionAt)
       setCloudMessage('Sparat.')
     } catch (e) {
       setCloudMessage(e instanceof Error ? e.message : 'Kunde inte spara.')
@@ -413,7 +404,6 @@ export default function App() {
       setCloudBusy(true)
       await saveLiveTripState(empty, null)
       setCloudUpdatedAt(new Date().toISOString())
-      setCloudPositionAt(null)
       setCloudMessage('Resan återställd.')
     } catch (e) {
       setCloudMessage(e instanceof Error ? e.message : 'Kunde inte återställa.')
@@ -523,9 +513,6 @@ export default function App() {
 
       {viewOnlyCloud ? (
         <ViewerControls
-          cloudUpdatedAt={cloudUpdatedAt}
-          cloudPositionAt={cloudPositionAt}
-          cloudMessage={cloudMessage}
           cloudBusy={cloudBusy}
           hasUserPosition={userPosition != null}
           onRefreshFromCloud={refreshFromCloud}
