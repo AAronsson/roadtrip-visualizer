@@ -112,13 +112,13 @@ export async function fetchDayWeather(
 
   const today = todayIsoDate()
   const forecastHorizon = addDays(today, 16)
-  let result: DayWeather | null = null
 
   if (date > forecastHorizon) {
     cache.set(key, null)
     return null
   }
 
+  let result: DayWeather | null
   if (date >= today) {
     result = await fetchOpenMeteoDaily(FORECAST_BASE, lat, lng, date)
   } else {

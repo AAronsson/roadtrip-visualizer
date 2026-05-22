@@ -138,10 +138,6 @@ export function ItineraryView({
   useEffect(() => {
     let cancelled = false
     const withSleep = days.filter((d) => d.sleepWaypoint)
-    if (withSleep.length === 0) {
-      setWeatherByDate({})
-      return
-    }
 
     void Promise.all(
       withSleep.map(async (day) => {

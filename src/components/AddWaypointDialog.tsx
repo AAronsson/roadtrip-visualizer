@@ -50,20 +50,21 @@ export function AddWaypointDialog({
     defaultAfterId(waypoints, visitedWaypointIds),
   )
   const nameRef = useRef<HTMLInputElement>(null)
-  const geocodedRef = useRef(false)
+  const [appliedGeocodeResult, setAppliedGeocodeResult] = useState<
+    typeof geocodeResult
+  >(null)
 
   useEffect(() => {
     nameRef.current?.focus()
   }, [])
 
   // Fill in name from geocode once it arrives, but only if the user hasn't typed yet.
-  useEffect(() => {
-    if (!geocodeResult) return
-    if (geocodedRef.current) return
-    geocodedRef.current = true
+  // Done during render (not in an effect) per React docs: "Adjusting state when a prop changes".
+  if (geocodeResult && geocodeResult !== appliedGeocodeResult) {
+    setAppliedGeocodeResult(geocodeResult)
     if (!name) setName(geocodeResult.name)
     if (!countryCode) setCountryCode(geocodeResult.countryCode)
-  }, [geocodeResult, name, countryCode])
+  }
 
   const flag = flagUrl(countryCode)
   const effectiveName = name.trim() || fallbackName

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { searchPlaces } from '../lib/geocode'
 import type { GeocodeHit } from '../lib/geocode'
-import type { PersistedTripState, Waypoint } from '../types/trip'
+import type { Waypoint } from '../types/trip'
 
 function flagUrl(countryCode: string | undefined): string | null {
   if (!countryCode || countryCode.length !== 2) return null
@@ -23,7 +23,6 @@ function defaultAfterId(
 
 type EditTripViewProps = {
   waypoints: Waypoint[]
-  persisted: PersistedTripState
   defaultWaypointIds: Set<string>
   visitedWaypointIds: string[]
   onToggleVisited: (id: string) => void
@@ -37,7 +36,6 @@ type EditTripViewProps = {
 
 export function EditTripView({
   waypoints,
-  persisted,
   defaultWaypointIds,
   visitedWaypointIds,
   onToggleVisited,

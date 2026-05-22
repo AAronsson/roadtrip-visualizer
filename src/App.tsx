@@ -159,14 +159,11 @@ export default function App() {
     [waypoints, viewOnlyCloud, persisted.visitedWaypointIds],
   )
 
-  useEffect(() => {
-    if (
-      selectedWaypointId &&
-      !displayWaypoints.some((w) => w.id === selectedWaypointId)
-    ) {
-      setSelectedWaypointId(null)
-    }
-  }, [displayWaypoints, selectedWaypointId])
+  const effectiveSelectedWaypointId =
+    selectedWaypointId &&
+    displayWaypoints.some((w) => w.id === selectedWaypointId)
+      ? selectedWaypointId
+      : null
 
   const waypointSig = useMemo(
     () => routeWaypoints.map((w) => `${w.id}:${w.lat},${w.lng}`).join('|'),
@@ -628,7 +625,6 @@ export default function App() {
     return (
       <EditTripView
         waypoints={waypoints}
-        persisted={persisted}
         defaultWaypointIds={defaultWaypointIds}
         visitedWaypointIds={persisted.visitedWaypointIds}
         onToggleVisited={toggleVisited}
@@ -651,7 +647,7 @@ export default function App() {
         waypoints={displayWaypoints}
         routeSegments={routeSegments}
         visitedWaypointIds={persisted.visitedWaypointIds}
-        selectedWaypointId={selectedWaypointId}
+        selectedWaypointId={effectiveSelectedWaypointId}
         onSelectWaypoint={(id) => {
           if (addModeActive) cancelAddMode()
           setSelectedWaypointId(id)
