@@ -41,6 +41,8 @@ export async function saveLiveTripState(
     visitedWaypointIds: persisted.visitedWaypointIds,
     customWaypoints: persisted.customWaypoints,
     removedDefaultIds: persisted.removedDefaultIds,
+    waypointOrder: persisted.waypointOrder,
+    priorityOverrides: persisted.priorityOverrides,
   }
   if (position) {
     body.position = {
@@ -75,6 +77,15 @@ function normalizeLiveState(data: Partial<LiveTripState>): LiveTripState {
     removedDefaultIds: Array.isArray(data.removedDefaultIds)
       ? data.removedDefaultIds.filter((x): x is string => typeof x === 'string')
       : [],
+    waypointOrder: Array.isArray(data.waypointOrder)
+      ? data.waypointOrder.filter((x): x is string => typeof x === 'string')
+      : undefined,
+    priorityOverrides:
+      data.priorityOverrides &&
+      typeof data.priorityOverrides === 'object' &&
+      !Array.isArray(data.priorityOverrides)
+        ? (data.priorityOverrides as Record<string, 0 | 1 | 2 | 3>)
+        : undefined,
     updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : undefined,
     position:
       data.position &&
@@ -106,5 +117,7 @@ export function liveStateToPersisted(live: LiveTripState): PersistedTripState {
     visitedWaypointIds: live.visitedWaypointIds,
     customWaypoints: live.customWaypoints,
     removedDefaultIds: live.removedDefaultIds,
+    waypointOrder: live.waypointOrder,
+    priorityOverrides: live.priorityOverrides,
   }
 }

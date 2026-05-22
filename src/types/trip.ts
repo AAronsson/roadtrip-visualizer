@@ -33,6 +33,10 @@ export type PersistedTripState = {
   customWaypoints: Waypoint[]
   /** IDs from trip.json that the user removed on this device */
   removedDefaultIds: string[]
+  /** Explicit full ordering of waypoint IDs. Absent = defaults first, customs last. */
+  waypointOrder?: string[]
+  /** Priority overrides for any waypoint (default or custom). */
+  priorityOverrides?: Record<string, 0 | 1 | 2 | 3>
 }
 
 /** Shared trip progress in Azure blob (optional). */

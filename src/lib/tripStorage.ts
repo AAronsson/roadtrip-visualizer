@@ -23,6 +23,15 @@ export function loadPersistedState(): PersistedTripState {
       removedDefaultIds: Array.isArray(parsed.removedDefaultIds)
         ? parsed.removedDefaultIds.filter((x): x is string => typeof x === 'string')
         : [],
+      waypointOrder: Array.isArray(parsed.waypointOrder)
+        ? parsed.waypointOrder.filter((x): x is string => typeof x === 'string')
+        : undefined,
+      priorityOverrides:
+        parsed.priorityOverrides &&
+        typeof parsed.priorityOverrides === 'object' &&
+        !Array.isArray(parsed.priorityOverrides)
+          ? (parsed.priorityOverrides as Record<string, 0 | 1 | 2 | 3>)
+          : undefined,
     }
   } catch {
     return emptyState()

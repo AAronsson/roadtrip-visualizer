@@ -72,3 +72,81 @@ export async function searchPlaces(query: string): Promise<GeocodeHit[]> {
   if (mapTiler.length > 0) return mapTiler
   return geocodeNominatim(q)
 }
+
+/** MapTiler reverse geocoding. */
+async function reverseGeocodeMapTiler(
+  lat: number,
+  lng: number,
+): Promise<GeocodeHit | null> {
+  const key = import.meta.env.VITE_MAPTILER_API_KEY?.trim()
+  if (!key) return null
+  const url = `https://api.maptiler.com/geocoding/${lng},${lat}.json?key=${key}&limit=1`
+  const res = await fetch(url)
+  if (!res.ok) return null
+  const data = (await res.json()) as {
+    features?: Array<{
+      place_name?: string
+      text?: string
+      properties?: { country_code?: string }
+    }>
+  }
+  const f = data.features?.[0]
+  if (!f) return null
+  return {
+    displayName: f.place_name ?? f.text ?? '',
+    lat,
+    lng,
+    countryCode: normalizeCountryCode(f.properties?.country_code),
+  }
+}
+
+/** Nominatim reverse geocoding. */
+async function reverseGeocodeNominatim(
+  lat: number,
+  lng: number,
+): Promise<GeocodeHit | null> {
+  const url = new URL('https://nominatim.openstreetmap.org/reverse')
+  url.searchParams.set('lat', String(lat))
+  url.searchParams.set('lon', String(lng))
+  url.searchParams.set('format', 'jsonv2')
+  const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } })
+  if (!res.ok) return null
+  const r = (await res.json()) as {
+    display_name?: string
+    name?: string
+    address?: { country_code?: string; city?: string; town?: string; village?: string }
+  }
+  const name =
+    r.name ??
+    r.address?.city ??
+    r.address?.town ??
+    r.address?.village ??
+    r.display_name ??
+    ''
+  if (!name) return null
+  return {
+    displayName: name,
+    lat,
+    lng,
+    countryCode: normalizeCountryCode(r.address?.country_code),
+  }
+}
+
+export async function reverseGeocode(
+  lat: number,
+  lng: number,
+): Promise<{ name: string; countryCode?: string } | null> {
+  try {
+    const hit = await reverseGeocodeMapTiler(lat, lng)
+    if (hit?.displayName) return { name: hit.displayName, countryCode: hit.countryCode }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const hit = await reverseGeocodeNominatim(lat, lng)
+    if (hit?.displayName) return { name: hit.displayName, countryCode: hit.countryCode }
+  } catch {
+    /* fall through */
+  }
+  return null
+}

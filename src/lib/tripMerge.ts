@@ -2,6 +2,8 @@ import type { PersistedTripState, TripFile, Waypoint } from '../types/trip'
 
 /**
  * Merges canonical `trip.json` waypoints with per-device persistence.
+ * When `persisted.waypointOrder` is set, the result is sorted by that order;
+ * IDs not listed in the order are appended at the end in their natural order.
  */
 export function mergeTripWaypoints(
   file: TripFile,
@@ -12,7 +14,30 @@ export function mergeTripWaypoints(
   const keptDefaultIds = new Set(defaultsKept.map((w) => w.id))
   /** Omit customs that duplicate a default that is still shown (avoid two pins). */
   const custom = persisted.customWaypoints.filter((c) => !keptDefaultIds.has(c.id))
-  return [...defaultsKept, ...custom]
+  const merged = [...defaultsKept, ...custom]
+
+  const overrides = persisted.priorityOverrides
+  const withOverrides = overrides
+    ? merged.map((w) =>
+        w.id in overrides ? { ...w, priority: overrides[w.id] } : w,
+      )
+    : merged
+
+  const order = persisted.waypointOrder
+  if (!order || order.length === 0) return withOverrides
+
+  const byId = new Map(withOverrides.map((w) => [w.id, w]))
+  const orderSet = new Set(order)
+  const ordered: Waypoint[] = []
+  for (const id of order) {
+    const w = byId.get(id)
+    if (w) ordered.push(w)
+  }
+  // Append any waypoints not in the order list (e.g. new defaults added to trip.json)
+  for (const w of withOverrides) {
+    if (!orderSet.has(w.id)) ordered.push(w)
+  }
+  return ordered
 }
 
 export function isVisited(waypointId: string, persisted: PersistedTripState): boolean {
@@ -59,6 +84,17 @@ export function mergePersistedStates(
       baseline.customWaypoints,
       local.customWaypoints,
     ),
+    // Last-writer-wins: if local changed from baseline, use local; otherwise use server.
+    waypointOrder: mergeWaypointOrder(
+      server.waypointOrder,
+      baseline.waypointOrder,
+      local.waypointOrder,
+    ),
+    priorityOverrides: mergeLastWriterWins(
+      server.priorityOverrides,
+      baseline.priorityOverrides,
+      local.priorityOverrides,
+    ),
   }
 }
 
@@ -92,4 +128,23 @@ function mergeCustomWaypoints(
   for (const w of addedLocal) byId.set(w.id, w)
   for (const id of removedLocally) byId.delete(id)
   return [...byId.values()]
+}
+
+function mergeLastWriterWins<T>(
+  server: T | undefined,
+  baseline: T | undefined,
+  local: T | undefined,
+): T | undefined {
+  const localChanged =
+    JSON.stringify(local ?? null) !== JSON.stringify(baseline ?? null)
+  if (localChanged) return local
+  return server
+}
+
+function mergeWaypointOrder(
+  server: string[] | undefined,
+  baseline: string[] | undefined,
+  local: string[] | undefined,
+): string[] | undefined {
+  return mergeLastWriterWins(server, baseline, local)
 }

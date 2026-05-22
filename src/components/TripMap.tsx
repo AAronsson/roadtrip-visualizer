@@ -82,6 +82,14 @@ type TripMapProps = {
   userPosition: { lng: number; lat: number } | null
   /** Increment from parent to fly the map to `userPosition`. */
   recenterOnUserKey: number
+  /** When true, clicks on empty map areas drop a pending pin. */
+  addModeActive?: boolean
+  /** Temporary pin placed during add-mode. */
+  pendingPin?: { lng: number; lat: number } | null
+  /** Called with the clicked lngLat when user taps the map in add-mode. */
+  onMapTapInAddMode?: (lngLat: { lng: number; lat: number }) => void
+  /** Called when the user taps the pending pin marker. */
+  onPendingPinTap?: () => void
 }
 
 export function TripMap({
@@ -93,20 +101,36 @@ export function TripMap({
   onSelectWaypoint,
   userPosition,
   recenterOnUserKey,
+  addModeActive = false,
+  pendingPin = null,
+  onMapTapInAddMode,
+  onPendingPinTap,
 }: TripMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
+  const pendingMarkerRef = useRef<maplibregl.Marker | null>(null)
   const onSelectRef = useRef(onSelectWaypoint)
   const waypointsRef = useRef(waypoints)
   const visitedRef = useRef(visitedWaypointIds)
   const selectedRef = useRef(selectedWaypointId)
   const userPositionRef = useRef(userPosition)
   const routeSegmentsRef = useRef(routeSegments)
+  const addModeRef = useRef(addModeActive)
+  const onMapTapRef = useRef(onMapTapInAddMode)
+  const onPendingPinTapRef = useRef(onPendingPinTap)
 
   useEffect(() => {
     onSelectRef.current = onSelectWaypoint
   }, [onSelectWaypoint])
+
+  useEffect(() => {
+    addModeRef.current = addModeActive
+    onMapTapRef.current = onMapTapInAddMode
+    onPendingPinTapRef.current = onPendingPinTap
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = addModeActive ? 'crosshair' : ''
+  }, [addModeActive, onMapTapInAddMode, onPendingPinTap])
 
   useEffect(() => {
     waypointsRef.current = waypoints
@@ -319,15 +343,30 @@ export function TripMap({
 
       const onWaypointClick = (e: maplibregl.MapLayerMouseEvent) => {
         e.originalEvent.stopPropagation()
+        if (addModeRef.current) {
+          // Clicking an existing waypoint in add-mode cancels add-mode and selects the waypoint
+          const id = e.features?.[0]?.properties?.id
+          if (typeof id === 'string') onSelectRef.current(id)
+          // Parent will handle cancelling add-mode via onSelectWaypoint side-effect
+          return
+        }
         const id = e.features?.[0]?.properties?.id
         if (typeof id === 'string') onSelectRef.current(id)
       }
       mapInstance.on('click', 'trip-waypoints-circle', onWaypointClick)
       mapInstance.on('mouseenter', 'trip-waypoints-circle', () => {
-        mapInstance.getCanvas().style.cursor = 'pointer'
+        if (!addModeRef.current) mapInstance.getCanvas().style.cursor = 'pointer'
       })
       mapInstance.on('mouseleave', 'trip-waypoints-circle', () => {
-        mapInstance.getCanvas().style.cursor = ''
+        mapInstance.getCanvas().style.cursor = addModeRef.current ? 'crosshair' : ''
+      })
+      mapInstance.on('click', (e) => {
+        if (!addModeRef.current) return
+        const features = mapInstance.queryRenderedFeatures(e.point, {
+          layers: ['trip-waypoints-circle'],
+        })
+        if (features.length > 0) return // handled by waypoint click
+        onMapTapRef.current?.({ lng: e.lngLat.lng, lat: e.lngLat.lat })
       })
 
       syncTripData()
@@ -345,6 +384,8 @@ export function TripMap({
       cancelled = true
       markerRef.current?.remove()
       markerRef.current = null
+      pendingMarkerRef.current?.remove()
+      pendingMarkerRef.current = null
       map?.remove()
       mapRef.current = null
     }
@@ -386,6 +427,38 @@ export function TripMap({
       essential: true,
     })
   }, [recenterOnUserKey])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map?.isStyleLoaded()) {
+      // Wait until style is loaded, then try again via the existing syncTripData pattern.
+      // pendingPin is re-evaluated on every render so it will self-correct.
+      return
+    }
+
+    if (!pendingPin) {
+      pendingMarkerRef.current?.remove()
+      pendingMarkerRef.current = null
+      return
+    }
+
+    const { lng, lat } = pendingPin
+    if (!pendingMarkerRef.current) {
+      const marker = new maplibregl.Marker({ color: '#f59e0b' })
+        .setLngLat([lng, lat])
+        .addTo(map)
+      const el = marker.getElement()
+      el.style.cursor = 'pointer'
+      el.title = 'Tap för att namnge och spara'
+      el.addEventListener('click', (e) => {
+        e.stopPropagation()
+        onPendingPinTapRef.current?.()
+      })
+      pendingMarkerRef.current = marker
+    } else {
+      pendingMarkerRef.current.setLngLat([lng, lat])
+    }
+  }, [pendingPin])
 
   return (
     <div

@@ -25,6 +25,7 @@ type WaypointDrawerProps = {
   cloudUpdatedAt: string | null
   cloudMessage: string | null
   cloudBusy: boolean
+  onStartAddMode?: () => void
 }
 
 export function WaypointDrawer({
@@ -47,6 +48,7 @@ export function WaypointDrawer({
   cloudUpdatedAt,
   cloudMessage,
   cloudBusy,
+  onStartAddMode,
 }: WaypointDrawerProps) {
   const cloudTime =
     cloudUpdatedAt &&
@@ -76,9 +78,25 @@ export function WaypointDrawer({
       >
         <div className="waypoint-drawer__inner">
           <h2 className="waypoint-drawer__title">Stops</h2>
-          <a href="#/itinerary" className="button button--secondary waypoint-drawer__itinerary">
-            Resplan →
-          </a>
+          <div className="waypoint-drawer__nav">
+            <a href="#/itinerary" className="button button--secondary waypoint-drawer__nav-btn">
+              Resplan →
+            </a>
+            {writeCloud ? (
+              <a href="#/edit" className="button button--secondary waypoint-drawer__nav-btn">
+                Redigera →
+              </a>
+            ) : null}
+          </div>
+          {writeCloud && onStartAddMode ? (
+            <button
+              type="button"
+              className="button waypoint-drawer__add-btn"
+              onClick={onStartAddMode}
+            >
+              + Lägg till stopp på karta
+            </button>
+          ) : null}
 
           {cloudEnabled && writeCloud ? (
             <section className="drawer-section">

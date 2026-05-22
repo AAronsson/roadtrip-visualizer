@@ -3,6 +3,8 @@ import { TripMap } from './components/TripMap'
 import { ViewerControls } from './components/ViewerControls'
 import { WaypointDrawer } from './components/WaypointDrawer'
 import { ItineraryView } from './components/ItineraryView'
+import { EditTripView } from './components/EditTripView'
+import { AddWaypointDialog } from './components/AddWaypointDialog'
 import {
   mergePersistedStates,
   mergeTripWaypoints,
@@ -26,21 +28,42 @@ import {
   liveStateToPersisted,
   saveLiveTripState,
 } from './lib/tripSync'
+import { reverseGeocode } from './lib/geocode'
 import type {
   LiveTripState,
   PersistedTripState,
   RouteSegment,
   TripFile,
+  Waypoint,
 } from './types/trip'
 
-type View = 'map' | 'itinerary'
+type View = 'map' | 'itinerary' | 'edit'
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32) || 'stopp'
+}
+
+function generateId(name: string): string {
+  const base = slugify(name)
+  const rand = Math.random().toString(36).slice(2, 8)
+  return `${base}-${rand}`
+}
 
 const PUBLIC_REFRESH_MS = 15 * 60 * 1000
 const STATE_SAVE_DEBOUNCE_MS = 1500
 const POSITION_SAVE_INTERVAL_MS = 2 * 60 * 1000
 
 function viewFromHash(): View {
-  return window.location.hash.startsWith('#/itinerary') ? 'itinerary' : 'map'
+  const hash = window.location.hash
+  if (hash.startsWith('#/itinerary')) return 'itinerary'
+  if (hash.startsWith('#/edit')) return 'edit'
+  return 'map'
 }
 
 const emptyPersisted = (): PersistedTripState => ({
@@ -72,6 +95,13 @@ export default function App() {
   const [initialFetchDone, setInitialFetchDone] = useState(
     () => !isCloudSyncEnabled(),
   )
+  const [addModeActive, setAddModeActive] = useState(false)
+  const [pendingPin, setPendingPin] = useState<{ lng: number; lat: number } | null>(null)
+  const [pendingPinGeocodeResult, setPendingPinGeocodeResult] = useState<{
+    name: string
+    countryCode?: string
+  } | null | 'loading'>('loading')
+  const [showAddDialog, setShowAddDialog] = useState(false)
 
   const viewOnlyCloud = isViewOnlyCloud()
   const writeCloud = canWriteCloud()
@@ -375,6 +405,115 @@ export default function App() {
     [persisted, updatePersisted],
   )
 
+  const startAddMode = useCallback(() => {
+    setAddModeActive(true)
+    setPendingPin(null)
+    setPendingPinGeocodeResult('loading')
+    setShowAddDialog(false)
+    setDrawerOpen(false)
+  }, [])
+
+  const cancelAddMode = useCallback(() => {
+    setAddModeActive(false)
+    setPendingPin(null)
+    setPendingPinGeocodeResult('loading')
+    setShowAddDialog(false)
+  }, [])
+
+  const handleMapTapInAddMode = useCallback(
+    (lngLat: { lng: number; lat: number }) => {
+      setPendingPin(lngLat)
+      setPendingPinGeocodeResult('loading')
+      setShowAddDialog(false)
+      void reverseGeocode(lngLat.lat, lngLat.lng).then((result) => {
+        setPendingPinGeocodeResult(result)
+      })
+    },
+    [],
+  )
+
+  const handlePendingPinTap = useCallback(() => {
+    setShowAddDialog(true)
+  }, [])
+
+  const handleAddWaypoint = useCallback(
+    (wp: Omit<Waypoint, 'id'>, afterId: string | null) => {
+      const id = generateId(wp.name)
+      const newWaypoint: Waypoint = { ...wp, id }
+      const currentOrder =
+        persisted.waypointOrder && persisted.waypointOrder.length > 0
+          ? persisted.waypointOrder
+          : waypoints.map((w) => w.id)
+
+      let newOrder: string[]
+      if (afterId === null) {
+        newOrder = [id, ...currentOrder]
+      } else {
+        const idx = currentOrder.indexOf(afterId)
+        if (idx >= 0) {
+          newOrder = [
+            ...currentOrder.slice(0, idx + 1),
+            id,
+            ...currentOrder.slice(idx + 1),
+          ]
+        } else {
+          newOrder = [...currentOrder, id]
+        }
+      }
+
+      updatePersisted({
+        ...persisted,
+        customWaypoints: [...persisted.customWaypoints, newWaypoint],
+        waypointOrder: newOrder,
+      })
+      cancelAddMode()
+    },
+    [persisted, waypoints, updatePersisted, cancelAddMode],
+  )
+
+  const handleReorder = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      const currentOrder =
+        persisted.waypointOrder && persisted.waypointOrder.length > 0
+          ? [...persisted.waypointOrder]
+          : waypoints.map((w) => w.id)
+      const [moved] = currentOrder.splice(fromIdx, 1)
+      currentOrder.splice(toIdx, 0, moved)
+      updatePersisted({ ...persisted, waypointOrder: currentOrder })
+    },
+    [persisted, waypoints, updatePersisted],
+  )
+
+  const handleRenameCustom = useCallback(
+    (id: string, newName: string) => {
+      updatePersisted({
+        ...persisted,
+        customWaypoints: persisted.customWaypoints.map((w) =>
+          w.id === id ? { ...w, name: newName } : w,
+        ),
+      })
+    },
+    [persisted, updatePersisted],
+  )
+
+  const handleSetPriority = useCallback(
+    (id: string, priority: 0 | 1 | 2 | 3) => {
+      const isCustom = persisted.customWaypoints.some((w) => w.id === id)
+      if (isCustom) {
+        updatePersisted({
+          ...persisted,
+          customWaypoints: persisted.customWaypoints.map((w) =>
+            w.id === id ? { ...w, priority } : w,
+          ),
+        })
+      } else {
+        const overrides = { ...(persisted.priorityOverrides ?? {}), [id]: priority }
+        updatePersisted({ ...persisted, priorityOverrides: overrides })
+      }
+    },
+    [persisted, updatePersisted],
+  )
+
   const resetTrip = useCallback(async () => {
     if (saveTimerRef.current != null) {
       window.clearTimeout(saveTimerRef.current)
@@ -485,6 +624,26 @@ export default function App() {
     )
   }
 
+  if (view === 'edit') {
+    return (
+      <EditTripView
+        waypoints={waypoints}
+        persisted={persisted}
+        defaultWaypointIds={defaultWaypointIds}
+        visitedWaypointIds={persisted.visitedWaypointIds}
+        onToggleVisited={toggleVisited}
+        onRemoveWaypoint={removeWaypoint}
+        onReorder={handleReorder}
+        onRenameCustom={handleRenameCustom}
+        onSetPriority={handleSetPriority}
+        onAddWaypoint={handleAddWaypoint}
+        onBackToMap={() => {
+          window.location.hash = ''
+        }}
+      />
+    )
+  }
+
   return (
     <div className="app-shell">
       <TripMap
@@ -493,9 +652,16 @@ export default function App() {
         routeSegments={routeSegments}
         visitedWaypointIds={persisted.visitedWaypointIds}
         selectedWaypointId={selectedWaypointId}
-        onSelectWaypoint={setSelectedWaypointId}
+        onSelectWaypoint={(id) => {
+          if (addModeActive) cancelAddMode()
+          setSelectedWaypointId(id)
+        }}
         userPosition={userPosition}
         recenterOnUserKey={recenterOnUserKey}
+        addModeActive={addModeActive}
+        pendingPin={pendingPin}
+        onMapTapInAddMode={handleMapTapInAddMode}
+        onPendingPinTap={handlePendingPinTap}
       />
 
       {basemap.isFallback ? (
@@ -503,6 +669,21 @@ export default function App() {
           Using a free fallback map (no hillshade). Add{' '}
           <code>VITE_MAPTILER_API_KEY</code> in <code>.env</code> for terrain and
           richer detail — see README.
+        </div>
+      ) : null}
+
+      {addModeActive ? (
+        <div className="add-mode-banner">
+          {pendingPin
+            ? 'Tap på pluppon för att spara · '
+            : 'Tap på kartan för att placera stopp · '}
+          <button
+            type="button"
+            className="add-mode-banner__cancel"
+            onClick={cancelAddMode}
+          >
+            Avbryt
+          </button>
         </div>
       ) : null}
 
@@ -532,8 +713,22 @@ export default function App() {
           cloudUpdatedAt={cloudUpdatedAt}
           cloudMessage={cloudMessage}
           cloudBusy={cloudBusy}
+          onStartAddMode={startAddMode}
         />
       )}
+
+      {showAddDialog && pendingPin ? (
+        <AddWaypointDialog
+          lngLat={pendingPin}
+          geocodeResult={
+            pendingPinGeocodeResult === 'loading' ? null : pendingPinGeocodeResult
+          }
+          waypoints={waypoints}
+          visitedWaypointIds={persisted.visitedWaypointIds}
+          onSave={handleAddWaypoint}
+          onCancel={cancelAddMode}
+        />
+      ) : null}
     </div>
   )
 }

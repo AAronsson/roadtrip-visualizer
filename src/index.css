@@ -170,6 +170,8 @@ body {
   text-decoration: none;
 }
 
+
+
 .waypoint-drawer__hint {
   margin: 0 0 16px;
   font-size: 13px;
@@ -563,6 +565,352 @@ body {
 
 .itinerary-stop__role {
   font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ── Waypoint drawer nav / add button ─────────────────────────────────── */
+
+.waypoint-drawer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.waypoint-drawer__nav-btn {
+  flex: 1 1 auto;
+  text-align: center;
+  text-decoration: none;
+}
+
+.waypoint-drawer__add-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+/* ── Add-mode banner ──────────────────────────────────────────────────── */
+
+.add-mode-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) 16px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  background: rgba(15, 20, 25, 0.92);
+  border-bottom: 1px solid var(--border);
+  pointer-events: auto;
+}
+
+.add-mode-banner__cancel {
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+}
+
+.add-mode-banner__cancel:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* pending-pin-marker: uses MapLibre built-in marker, no custom CSS needed */
+
+/* ── Add waypoint dialog ──────────────────────────────────────────────── */
+
+.add-dialog-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 16px;
+}
+
+.add-dialog {
+  width: min(100%, 420px);
+  padding: 20px 20px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.add-dialog__title {
+  margin: 0 0 14px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.add-dialog__name-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.add-dialog__name-input {
+  flex: 1;
+}
+
+.add-dialog__flag {
+  display: block;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.add-dialog__flag--empty {
+  width: 20px;
+  height: 15px;
+  background: var(--border);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.add-dialog__coords {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.add-dialog__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.add-dialog__select {
+  display: block;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 0 12px;
+  min-height: var(--tap);
+  font-size: 15px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.add-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.add-dialog__actions .button {
+  flex: 1 1 auto;
+}
+
+/* ── Edit trip view ───────────────────────────────────────────────────── */
+
+.edit-trip {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px
+    max(24px, env(safe-area-inset-bottom));
+}
+
+.edit-trip__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.edit-trip__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.edit-trip__empty {
+  color: var(--text-muted);
+}
+
+.edit-trip__list {
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.edit-trip-item {
+  display: grid;
+  grid-template-columns: auto 24px 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 8px;
+  margin-bottom: 6px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.edit-trip-item--done {
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.edit-trip-item--preliminary {
+  opacity: 0.55;
+}
+
+.edit-trip-item__order {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.edit-trip-item__arrow {
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+}
+
+.edit-trip-item__arrow:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--border);
+}
+
+.edit-trip-item__arrow:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.edit-trip-item__flag {
+  display: block;
+  border-radius: 2px;
+}
+
+.edit-trip-item__flag--empty {
+  width: 20px;
+  height: 15px;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.edit-trip-item__body {
+  min-width: 0;
+}
+
+.edit-trip-item__name {
+  display: block;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.edit-trip-item__name--editable {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.edit-trip-item__name--editable:hover {
+  color: var(--accent);
+}
+
+.edit-trip-item__rename {
+  display: block;
+  width: 100%;
+  margin-bottom: 2px;
+  min-height: 36px;
+  font-size: 15px;
+}
+
+.edit-trip-item__meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.edit-trip-item__check input {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.edit-trip-item__visibility {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  opacity: 0.6;
+}
+
+.edit-trip-item__visibility:hover {
+  opacity: 1;
+  background: var(--border);
+}
+
+.edit-trip-item__visibility--private {
+  opacity: 0.9;
+}
+
+.edit-trip-item__visibility-placeholder {
+  display: block;
+  width: 26px;
+}
+
+.edit-trip-item__remove {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  opacity: 0.5;
+}
+
+.edit-trip-item__remove:hover {
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.12);
+  opacity: 1;
+}
+
+.edit-trip__add-section {
+  padding: 20px 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.edit-trip__add-title {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.edit-trip__search-hint {
+  margin: 4px 0 0;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
