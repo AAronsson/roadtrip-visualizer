@@ -18,7 +18,9 @@ import { resolveBasemap } from './lib/mapStyle'
 import {
   clearPersistedState,
   loadPersistedState,
+  loadShareLocationPref,
   savePersistedState,
+  saveShareLocationPref,
 } from './lib/tripStorage'
 import {
   canWriteCloud,
@@ -57,7 +59,7 @@ function generateId(name: string): string {
 
 const PUBLIC_REFRESH_MS = 15 * 60 * 1000
 const STATE_SAVE_DEBOUNCE_MS = 1500
-const POSITION_SAVE_INTERVAL_MS = 2 * 60 * 1000
+const POSITION_SAVE_INTERVAL_MS = 5 * 60 * 1000
 
 function viewFromHash(): View {
   const hash = window.location.hash
@@ -85,7 +87,11 @@ export default function App() {
     lat: number
   } | null>(null)
   const [geoError, setGeoError] = useState<string | null>(null)
-  const [geoActive, setGeoActive] = useState(false)
+  const [geoActive, setGeoActive] = useState<boolean>(() => {
+    if (!canWriteCloud()) return false
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return false
+    return loadShareLocationPref() !== 'off'
+  })
   const watchIdRef = useRef<number | null>(null)
   const [recenterOnUserKey, setRecenterOnUserKey] = useState(0)
   const [view, setView] = useState<View>(viewFromHash)
@@ -543,24 +549,28 @@ export default function App() {
   }, [writeCloud])
 
   const stopGeo = useCallback(() => {
-    if (watchIdRef.current != null) {
-      navigator.geolocation.clearWatch(watchIdRef.current)
-      watchIdRef.current = null
-    }
+    saveShareLocationPref('off')
     setGeoActive(false)
     // Keep userPosition so the last known dot stays on the map for the
     // keyed user, and so autosave can preserve it from the server.
   }, [])
 
   const startGeo = useCallback(() => {
-    setGeoError(null)
     if (!navigator.geolocation) {
       setGeoError('Geolocation is not supported in this browser.')
       return
     }
-    stopGeo()
+    setGeoError(null)
+    saveShareLocationPref('on')
     setGeoActive(true)
-    watchIdRef.current = navigator.geolocation.watchPosition(
+  }, [])
+
+  // Subscribe to device GPS while sharing is on. Cleanup tears down the watch
+  // both when the user stops sharing and on unmount.
+  useEffect(() => {
+    if (!geoActive) return
+    if (!navigator.geolocation) return
+    const id = navigator.geolocation.watchPosition(
       (pos) => {
         setUserPosition({
           lng: pos.coords.longitude,
@@ -573,7 +583,12 @@ export default function App() {
       },
       { enableHighAccuracy: true, maximumAge: 15_000, timeout: 25_000 },
     )
-  }, [stopGeo])
+    watchIdRef.current = id
+    return () => {
+      navigator.geolocation.clearWatch(id)
+      watchIdRef.current = null
+    }
+  }, [geoActive])
 
   // Save once shortly after GPS starts producing positions, so the family
   // sees the new spot quickly instead of waiting for the throttled interval.
@@ -585,15 +600,6 @@ export default function App() {
     lastSharedPositionSaveRef.current = now
     scheduleSave(2000)
   }, [writeCloud, geoActive, userPosition, scheduleSave])
-
-  useEffect(() => {
-    return () => {
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
-        watchIdRef.current = null
-      }
-    }
-  }, [])
 
   const centerOnUser = useCallback(() => {
     setRecenterOnUserKey((k) => k + 1)

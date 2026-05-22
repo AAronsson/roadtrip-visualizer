@@ -1,6 +1,27 @@
 import type { PersistedTripState, Waypoint } from '../types/trip'
 
 const STORAGE_KEY = 'roadtrip-map-state-v1'
+const SHARE_LOCATION_PREF_KEY = 'roadtrip-map-share-location'
+
+export type ShareLocationPref = 'on' | 'off'
+
+export function loadShareLocationPref(): ShareLocationPref | null {
+  try {
+    const raw = localStorage.getItem(SHARE_LOCATION_PREF_KEY)
+    if (raw === 'on' || raw === 'off') return raw
+    return null
+  } catch {
+    return null
+  }
+}
+
+export function saveShareLocationPref(pref: ShareLocationPref): void {
+  try {
+    localStorage.setItem(SHARE_LOCATION_PREF_KEY, pref)
+  } catch {
+    // ignore
+  }
+}
 
 const emptyState = (): PersistedTripState => ({
   visitedWaypointIds: [],
