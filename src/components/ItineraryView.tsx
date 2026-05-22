@@ -251,7 +251,15 @@ export function ItineraryView({
                             ) : (
                               <span className="itinerary-stop__flag itinerary-stop__flag--empty" />
                             )}
-                            <span className="itinerary-stop__name">{w.name}</span>
+                            <a
+                              className="itinerary-stop__name"
+                              href={`https://www.google.com/maps/search/?api=1&query=${w.lat},${w.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Öppna i Google Maps"
+                            >
+                              {w.name}
+                            </a>
                             {isSleep ? (
                               <span
                                 className="itinerary-stop__role"
@@ -282,7 +290,16 @@ export function ItineraryView({
                             ) : (
                               <span className="itinerary-stop__flag itinerary-stop__flag--empty" />
                             )}
-                            <span className="itinerary-stop__name">{w.name}</span>
+                            <a
+                              className="itinerary-stop__name"
+                              href={`https://www.google.com/maps/search/?api=1&query=${w.lat},${w.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Öppna i Google Maps"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {w.name}
+                            </a>
                             {isSleep ? (
                               <span
                                 className="itinerary-stop__role"

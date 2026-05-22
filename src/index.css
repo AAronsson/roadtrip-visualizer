@@ -542,6 +542,13 @@ body {
 .itinerary-stop__name {
   flex: 1;
   font-size: 15px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.itinerary-stop__name:hover,
+.itinerary-stop__name:focus-visible {
+  text-decoration: underline;
 }
 
 .itinerary-stop--done .itinerary-stop__name {
