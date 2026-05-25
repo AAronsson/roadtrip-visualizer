@@ -13,7 +13,6 @@ type WaypointDrawerProps = {
   defaultWaypointIds: Set<string>
   onToggleVisited: (id: string) => void
   onRemoveWaypoint: (id: string) => void
-  onResetTrip: () => void
   geoActive: boolean
   geoError: string | null
   onStartGeo: () => void
@@ -36,7 +35,6 @@ export function WaypointDrawer({
   defaultWaypointIds,
   onToggleVisited,
   onRemoveWaypoint,
-  onResetTrip,
   geoActive,
   geoError,
   onStartGeo,
@@ -200,23 +198,6 @@ export function WaypointDrawer({
             {geoError ? <p className="field-error">{geoError}</p> : null}
           </section>
 
-          <section className="drawer-section drawer-section--actions">
-            <button
-              type="button"
-              className="button button--danger"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    'Återställ resan: bockar av alla besökta stopp och rensar positionen — för ALLA enheter. Säker?',
-                  )
-                ) {
-                  onResetTrip()
-                }
-              }}
-            >
-              Återställ resan
-            </button>
-          </section>
         </div>
       </aside>
     </>

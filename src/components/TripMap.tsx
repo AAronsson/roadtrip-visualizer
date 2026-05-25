@@ -1,16 +1,44 @@
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { annotateCountryFills } from '../lib/countryFill'
 import { fetchStyleJsonWithMercator } from '../lib/ensureStyleMercator'
 import type { BasemapInfo } from '../lib/mapStyle'
-import type { FeatureCollection } from 'geojson'
+import { addTripPoiLayers, TRIP_POI_LAYER_IDS, poiSubclassLabel } from '../lib/tripPois'
 import type { RouteSegment, Waypoint } from '../types/trip'
 
 const EUROPE_BOUNDS: maplibregl.LngLatBoundsLike = [
   [-32, 35],
   [48, 72],
 ]
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function buildPoiPopupHtml(
+  name: string | undefined,
+  subclass: string | undefined,
+  lng: number,
+  lat: number,
+): string {
+  const typeLabel = poiSubclassLabel(subclass)
+  const displayName = name && name.trim() ? name : typeLabel
+  const gmaps = `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}`
+  return `
+    <div class="trip-poi-popup">
+      <div class="trip-poi-popup__name">${escapeHtml(displayName)}</div>
+      <div class="trip-poi-popup__type">${escapeHtml(typeLabel)}</div>
+      <div class="trip-poi-popup__links">
+        <a href="${gmaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
+      </div>
+    </div>
+  `
+}
 
 function buildWaypointsGeoJSON(
   waypoints: Waypoint[],
@@ -208,46 +236,30 @@ export function TripMap({
         applyTerrainIfPresent(mapInstance)
       }
 
-      const styleLayers = mapInstance.getStyle().layers ?? []
-      const beforeSymbolId = styleLayers.find((l) => l.type === 'symbol')?.id
+      addTripPoiLayers(mapInstance)
 
-      void (async () => {
-        try {
-          const res = await fetch(
-            `${import.meta.env.BASE_URL}europe-countries.geojson`,
-          )
-          const raw = (await res.json()) as FeatureCollection
-          const data = annotateCountryFills(raw)
-          if (mapInstance.getSource('trip-europe-countries')) return
-          mapInstance.addSource('trip-europe-countries', { type: 'geojson', data })
-          mapInstance.addLayer(
-            {
-              id: 'trip-europe-fills',
-              type: 'fill',
-              source: 'trip-europe-countries',
-              paint: {
-                'fill-color': ['get', 'tripFill'],
-                'fill-opacity': 0.42,
-              },
-            },
-            beforeSymbolId,
-          )
-          mapInstance.addLayer(
-            {
-              id: 'trip-europe-outlines',
-              type: 'line',
-              source: 'trip-europe-countries',
-              paint: {
-                'line-color': 'rgba(55,48,40,0.35)',
-                'line-width': 0.65,
-              },
-            },
-            beforeSymbolId,
-          )
-        } catch {
-          /* optional layer */
-        }
-      })()
+      for (const layerId of TRIP_POI_LAYER_IDS) {
+        mapInstance.on('click', layerId, (e) => {
+          if (addModeRef.current) return
+          const feature = e.features?.[0]
+          if (!feature || feature.geometry.type !== 'Point') return
+          e.originalEvent.stopPropagation()
+          const [lng, lat] = feature.geometry.coordinates as [number, number]
+          const props = (feature.properties ?? {}) as Record<string, unknown>
+          const name = typeof props.name === 'string' ? props.name : undefined
+          const subclass = typeof props.subclass === 'string' ? props.subclass : undefined
+          new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '240px' })
+            .setLngLat([lng, lat])
+            .setHTML(buildPoiPopupHtml(name, subclass, lng, lat))
+            .addTo(mapInstance)
+        })
+        mapInstance.on('mouseenter', layerId, () => {
+          if (!addModeRef.current) mapInstance.getCanvas().style.cursor = 'pointer'
+        })
+        mapInstance.on('mouseleave', layerId, () => {
+          mapInstance.getCanvas().style.cursor = addModeRef.current ? 'crosshair' : ''
+        })
+      }
 
       mapInstance.addSource('trip-route', {
         type: 'geojson',

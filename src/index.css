@@ -64,6 +64,43 @@ body {
   margin: 8px;
 }
 
+.trip-poi-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.trip-poi-popup__name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.trip-poi-popup__type {
+  color: #475569;
+  font-size: 12px;
+  text-transform: lowercase;
+}
+
+.trip-poi-popup__links {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.trip-poi-popup__links a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.trip-poi-popup__links a:hover {
+  text-decoration: underline;
+}
+
 .basemap-banner {
   position: absolute;
   top: 0;
@@ -578,7 +615,10 @@ body {
 }
 
 .waypoint-drawer__nav-btn {
+  display: inline-flex;
   flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   text-decoration: none;
 }

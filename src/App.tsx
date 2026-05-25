@@ -16,7 +16,6 @@ import {
 } from './lib/osrmRoute'
 import { resolveBasemap } from './lib/mapStyle'
 import {
-  clearPersistedState,
   loadPersistedState,
   loadShareLocationPref,
   savePersistedState,
@@ -517,37 +516,6 @@ export default function App() {
     [persisted, updatePersisted],
   )
 
-  const resetTrip = useCallback(async () => {
-    if (saveTimerRef.current != null) {
-      window.clearTimeout(saveTimerRef.current)
-      saveTimerRef.current = null
-    }
-    const empty = emptyPersisted()
-    clearPersistedState()
-    setPersisted(empty)
-    baselineRef.current = empty
-    setSelectedWaypointId(null)
-    setUserPosition(null)
-    if (watchIdRef.current != null) {
-      navigator.geolocation.clearWatch(watchIdRef.current)
-      watchIdRef.current = null
-    }
-    setGeoActive(false)
-    setGeoError(null)
-
-    if (!writeCloud) return
-    try {
-      setCloudBusy(true)
-      await saveLiveTripState(empty, null)
-      setCloudUpdatedAt(new Date().toISOString())
-      setCloudMessage('Resan återställd.')
-    } catch (e) {
-      setCloudMessage(e instanceof Error ? e.message : 'Kunde inte återställa.')
-    } finally {
-      setCloudBusy(false)
-    }
-  }, [writeCloud])
-
   const stopGeo = useCallback(() => {
     saveShareLocationPref('off')
     setGeoActive(false)
@@ -703,7 +671,6 @@ export default function App() {
           defaultWaypointIds={defaultWaypointIds}
           onToggleVisited={toggleVisited}
           onRemoveWaypoint={removeWaypoint}
-          onResetTrip={resetTrip}
           geoActive={geoActive}
           geoError={geoError}
           onStartGeo={startGeo}
